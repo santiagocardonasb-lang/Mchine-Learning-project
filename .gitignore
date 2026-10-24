@@ -1,0 +1,14 @@
+# Virtual environment
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.pyc
+
+# Editor
+.vscode/
+
+# Local working guides
+GUIA_*.md
+PLAN_PROYECTO.md
