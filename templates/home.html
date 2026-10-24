@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="container py-5 page">
+
+    <header class="mb-5">
+        <p class="eyebrow">Project title</p>
+        <h1 class="fw-bold">{{ title }}</h1>
+    </header>
+
+    <section class="mb-5">
+        <h2 class="section-title">Problem statement</h2>
+        {% for paragraph in problem %}
+        <p>{{ paragraph }}</p>
+        {% endfor %}
+        <blockquote class="question">{{ question }}</blockquote>
+    </section>
+
+    <section>
+        <h2 class="section-title">General objective</h2>
+        <p class="objective">{{ objective }}</p>
+    </section>
+
+</div>
+{% endblock %}
