@@ -99,6 +99,20 @@ def test_home_counts_non_rejected_reports_of_current_month(client, db_session):
     assert reports_this_month_on_page(client.get("/").get_data(as_text=True)) == 2
 
 
+def test_reports_this_month_counts_only_user_source(db_session):
+    start = month_start()
+    add_report(start + timedelta(hours=1))
+    db.session.add(
+        Report(
+            latitude=4.6, longitude=-74.1, waste_type="household", size="small",
+            source="synthetic", reported_at=start + timedelta(hours=2),
+        )
+    )
+    db.session.commit()
+
+    assert stats_service.reports_this_month() == 1
+
+
 def test_home_without_predictions_shows_placeholder(client, db_session):
     html = client.get("/").get_data(as_text=True)
     assert "Predictions appear after the first model run" in html

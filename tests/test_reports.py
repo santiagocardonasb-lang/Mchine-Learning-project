@@ -1,7 +1,8 @@
 import pytest
 
 from app.forms.report import SIZE_CHOICES, WASTE_TYPE_CHOICES
-from app.models import SIZES, WASTE_TYPES, Report
+from app.extensions import db
+from app.models import SIZES, WASTE_TYPES, Report, User
 from app.services import auth_service, report_service
 from app.services.report_service import OutsideCoverage
 
@@ -75,6 +76,21 @@ def test_failing_hook_does_not_break_a_saved_report(logged_in, zones, monkeypatc
     assert Report.query.count() == 1
     assert "Report sent" in logged_in.get("/map").get_data(as_text=True)
 
+def test_hook_with_failed_flush_does_not_break_a_saved_report(logged_in, zones, monkeypatch):
+    def duplicate_email_hook(report):
+        db.session.add(User(name="Dup", email="ana@mail.com", password_hash="x"))
+        db.session.flush()
+
+    monkeypatch.setattr(report_service, "on_created", [duplicate_email_hook])
+
+    response = logged_in.post("/reports/new", data=report_form())
+
+    assert response.status_code == 302
+    assert response.headers["Location"] == "/map"
+    assert Report.query.count() == 1
+    assert "Report sent" in logged_in.get("/map").get_data(as_text=True)
+
+
 def test_report_with_invalid_waste_type_is_rejected(logged_in, zones):
     response = logged_in.post("/reports/new", data=report_form(waste_type="nuclear"))
 
@@ -146,3 +162,19 @@ def test_map_is_public(client, db_session):
     html = response.get_data(as_text=True)
     assert "Bogotá at a glance" in html
     assert "Predictions appear after the first model run" in html
+
+
+def test_expired_csrf_on_report_form_redirects_with_flash(app, user):
+    app.config["WTF_CSRF_ENABLED"] = True
+    client = app.test_client()
+    with client.session_transaction() as sess:
+        sess["_user_id"] = str(user.id)
+        sess["_fresh"] = True
+
+    response = client.post("/reports/new", data=report_form(), headers={"Referer": "http://localhost/reports/new"})
+
+    assert response.status_code == 302
+    assert response.headers["Location"] == "http://localhost/reports/new"
+    assert Report.query.count() == 0
+    with client.session_transaction() as sess:
+        assert ("error", "Your session expired. Please try again.") in sess["_flashes"]

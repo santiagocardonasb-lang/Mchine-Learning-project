@@ -18,6 +18,7 @@ def _current_month_bounds() -> tuple[datetime, datetime]:
 def reports_this_month() -> int:
     start, end = _current_month_bounds()
     return Report.query.filter(
+        Report.source == "user",
         Report.status != "rejected",
         Report.reported_at >= start,
         Report.reported_at < end,

@@ -56,12 +56,15 @@ def create(
     )
     db.session.add(report)
     db.session.commit()
+    # Read the id now: after a hook's failed flush, the expired report can't be refreshed.
+    report_id = report.id
     # The report is already saved; a failing hook must not turn that into an error page.
     for hook in on_created:
         try:
             hook(report)
         except Exception:
-            current_app.logger.exception("on_created hook %r failed for report %s", hook, report.id)
+            db.session.rollback()
+            current_app.logger.exception("on_created hook %r failed for report %s", hook, report_id)
     return report
 
 
