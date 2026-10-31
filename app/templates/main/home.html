@@ -13,8 +13,8 @@
       <h1>Know where waste <em>will pile up</em> in Bogotá — before it becomes a health risk.</h1>
       <p class="lead">Citizens report accumulation points. LocWaste maps them and a Machine Learning model predicts which zones are at risk next month, so collection can get there first.</p>
       <div class="ctas">
-        <a class="btn btn-brand" href="/reports/new"><i class="bi bi-geo-alt-fill"></i>Report a waste point</a>
-        <a class="btn btn-soft" href="/map"><i class="bi bi-map"></i>Explore the risk map</a>
+        <a class="btn btn-brand" href="{{ url_for('reports.new') }}"><i class="bi bi-geo-alt-fill"></i>Report a waste point</a>
+        <a class="btn btn-soft" href="{{ url_for('map.index') }}"><i class="bi bi-map"></i>Explore the risk map</a>
       </div>
     </div>
     <div class="card preview">
@@ -51,12 +51,12 @@
 
   <div class="section-head">
     <h2>Priority zones for next month</h2>
-    <a class="btn btn-ghost" href="/map">See all on the map <i class="bi bi-arrow-right"></i></a>
+    <a class="btn btn-ghost" href="{{ url_for('map.index') }}">See all on the map <i class="bi bi-arrow-right"></i></a>
   </div>
   {% if priority_zones %}
     <div class="zones">
       {% for zone in priority_zones %}
-        <a class="card zone" href="/map">
+        <a class="card zone" href="{{ url_for('map.index') }}">
           <span class="pill high"><span class="dot"></span>High · {{ (zone.probability * 100) | round | int }}%</span>
           <div class="name">{{ zone.upz }}</div>
           <small>{{ zone.locality }}</small>
@@ -72,46 +72,14 @@
 {% block scripts %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="{{ url_for('static', filename='js/map.js') }}"></script>
 <script>
-(function () {
-  const css = name => getComputedStyle(document.documentElement).getPropertyValue('--' + name).trim();
-  const tileUrl = () => document.documentElement.classList.contains('dark')
-    ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}'
-    : 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}';
-  const upzStyle = () => ({color: css('map-line'), weight: .6, opacity: .45, fillColor: css('brand'), fillOpacity: .06});
-  const localityStyle = () => ({color: css('map-line'), weight: 1.2, opacity: .7, fill: false});
-
-  // Static preview: every interaction is off; the full map lives at /map.
-  const map = L.map('homeMap', {
-    zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false,
-    doubleClickZoom: false, touchZoom: false, boxZoom: false, keyboard: false,
-  });
-  L.control.attribution({position: 'bottomleft', prefix: false}).addAttribution('Tiles &copy; Esri').addTo(map);
-  const tiles = L.tileLayer(tileUrl(), {maxZoom: 16}).addTo(map);
-  let upzLayer, localityLayer;
-
-  Promise.all([
-    fetch("{{ url_for('api.upz') }}").then(r => r.json()),
-    fetch("{{ url_for('api.localities') }}").then(r => r.json()),
-  ]).then(([upz, localities]) => {
-    upzLayer = L.geoJSON(upz, {interactive: false, style: upzStyle}).addTo(map);
-    localityLayer = L.geoJSON(localities, {interactive: false, style: localityStyle}).addTo(map);
-    fitCity();
-  });
-
-  function fitCity() {
+  initRiskMap(document.getElementById('homeMap'), {
+    upzUrl: "{{ url_for('api.upz') }}",
+    localitiesUrl: "{{ url_for('api.localities') }}",
+    interactive: false,
     // Extra left padding keeps the city clear of the "Reports this month" card.
-    if (upzLayer) map.fitBounds(upzLayer.getBounds(), {paddingTopLeft: [120, 10], paddingBottomRight: [10, 10]});
-  }
-
-  // The preview can't be panned, so refit on every resize to keep the whole city in view.
-  new ResizeObserver(() => { map.invalidateSize(); fitCity(); }).observe(document.getElementById('homeMap'));
-
-  document.addEventListener('themechange', () => {
-    tiles.setUrl(tileUrl());
-    if (upzLayer) upzLayer.setStyle(upzStyle());
-    if (localityLayer) localityLayer.setStyle(localityStyle());
+    fitOptions: {paddingTopLeft: [120, 10], paddingBottomRight: [10, 10]},
   });
-})();
 </script>
 {% endblock %}

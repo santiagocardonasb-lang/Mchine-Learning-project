@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Risk map · LocWaste{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+{% endblock %}
+
+{# Flashes float over the map instead of pushing it below the fold. #}
+{% block flashes %}{% endblock %}
+
+{% block content %}
+<div class="map-page">
+  <div id="map" aria-label="Map of Bogotá with UPZ and locality boundaries"></div>
+  {% include "partials/flash.html" %}
+
+  <div class="topbar">
+    <label class="card loc-filter">
+      <i class="bi bi-geo"></i>
+      <select id="locSelect" aria-label="Locality"><option value="">All localities</option></select>
+    </label>
+  </div>
+
+  <aside class="card side">
+    <div>
+      <h2>Bogotá at a glance</h2>
+      <p>Citizen reports and next-month risk by UPZ</p>
+    </div>
+    <div class="mini-stats">
+      <div><span class="label">Reports this month</span><b>{{ reports_this_month }}</b></div>
+    </div>
+    <div>
+      <span class="label">Top priority</span>
+      {% if priority_zones %}
+        {% for zone in priority_zones %}
+          <div class="prio-row">
+            <span class="n">{{ loop.index }}</span>
+            <span class="name">{{ zone.upz }}<small>{{ zone.locality }}</small></span>
+            <span class="pill high">{{ (zone.probability * 100) | round | int }}%</span>
+          </div>
+        {% endfor %}
+      {% else %}
+        <p class="side-empty"><i class="bi bi-hourglass-split"></i>Predictions appear after the first model run</p>
+      {% endif %}
+    </div>
+  </aside>
+
+  <div class="card detail" id="detail" aria-live="polite">
+    <div class="detail-head">
+      <div>
+        <span class="label">UPZ</span>
+        <h3 id="detailName"></h3>
+        <small id="detailLocality"></small>
+      </div>
+      <button class="icon-btn" id="detailClose" type="button" aria-label="Close"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <a class="btn btn-brand" id="detailReport" href="{{ url_for('reports.new') }}"><i class="bi bi-geo-alt-fill"></i>Report here</a>
+  </div>
+
+  <div class="card legend">
+    <span class="label">Risk</span>
+    <span><i class="sw" style="background:var(--low)"></i>Low</span>
+    <span><i class="sw" style="background:var(--medium)"></i>Medium</span>
+    <span><i class="sw" style="background:var(--high)"></i>High</span>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="{{ url_for('static', filename='js/map.js') }}"></script>
+<script>
+(function () {
+  const reportUrl = "{{ url_for('reports.new') }}";
+  const detail = document.getElementById('detail');
+  // The summary card covers the left 340px on wide screens, so fits leave room for it.
+  const fitOptions = () => window.matchMedia('(min-width: 901px)').matches
+    ? {paddingTopLeft: [340, 80], paddingBottomRight: [20, 20]}
+    : {paddingTopLeft: [16, 80], paddingBottomRight: [16, 16]};
+  const localityNames = {};
+
+  const risk = initRiskMap(document.getElementById('map'), {
+    upzUrl: "{{ url_for('api.upz') }}",
+    localitiesUrl: "{{ url_for('api.localities') }}",
+    fitOptions: fitOptions(),
+    onUpzClick: (feature, latlng) => {
+      document.getElementById('detailName').textContent = feature.properties.name;
+      document.getElementById('detailLocality').textContent = localityNames[feature.properties.locality_code] || '';
+      const point = new URLSearchParams({lat: latlng.lat.toFixed(6), lon: latlng.lng.toFixed(6)});
+      document.getElementById('detailReport').href = reportUrl + '?' + point;
+      detail.classList.add('open');
+    },
+  });
+  document.getElementById('detailClose').addEventListener('click', () => detail.classList.remove('open'));
+
+  const select = document.getElementById('locSelect');
+  risk.ready.then(({localities}) => {
+    const features = localities.features.slice().sort((a, b) => a.properties.name.localeCompare(b.properties.name, 'es'));
+    features.forEach(f => {
+      localityNames[f.properties.code] = f.properties.name;
+      select.add(new Option(f.properties.name, f.properties.code));
+    });
+    select.addEventListener('change', () => {
+      const feature = features.find(f => f.properties.code === select.value);
+      const bounds = feature ? L.geoJSON(feature).getBounds() : risk.layers.upz.getBounds();
+      risk.map.fitBounds(bounds, fitOptions());
+    });
+  });
+})();
+</script>
+{% endblock %}
