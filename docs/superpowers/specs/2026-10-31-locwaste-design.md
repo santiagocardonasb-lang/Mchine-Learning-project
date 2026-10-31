@@ -267,10 +267,16 @@ The mockup is the visual reference for every part: `docs/superpowers/mockups/loc
 |---|---|---|---|
 | **1 — Foundation** | Santiago | 1, 2 | project structure, config, Supabase/SQLite, all models and migrations, auth and roles, design system and base layout, `prepare_geo.py` + GeoJSON + `zone_stats.csv`, geo service and API, base map with boundaries, report form, my reports, about page, `create-admin` |
 | **2 — Data and model** | teammate | 3, 4, 5 | `ml/` (synthetic, features, train, config), `seed-synthetic` and `train` commands, `training_service` with manual and auto retrain, model page, CRISP-DM page |
-| **3 — Results and deploy** | teammate | 6 | heat map and risk layers, labels, filters and neighborhood search, `risk_service`, admin panel, home stats, Render deploy with Supabase |
+| **3 — Results** | teammate | 6 | heat map and risk layers, labels, filters and neighborhood search, `risk_service`, admin panel, home stats |
 
 Shared files each later part touches only to register its own pieces: `app/__init__.py`
 (blueprints, commands), `base.html` (nav links), `requirements.txt`.
+
+**Accounts and environments.** Supabase and Render belong to Santiago's accounts, so every
+operation on them is his, whichever part it serves: creating the database, running migrations
+and `load-zones` / `seed-synthetic` / `train` / `create-admin` against Supabase, setting
+environment variables, and deploying. Teammates work only locally with SQLite and never need
+those credentials; each part's guide ends with the steps Santiago runs in production.
 
 ## 13. Testing
 
