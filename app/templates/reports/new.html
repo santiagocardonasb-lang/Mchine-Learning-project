@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% set icons = {
+  "household": "bi-bag", "construction_debris": "bi-bricks", "bulky": "bi-box-seam",
+  "organic": "bi-flower1", "mixed": "bi-shuffle",
+  "small": "bi-bag", "medium": "bi-stack", "large": "bi-cone-striped",
+} %}
+
+{% macro errors(field) %}
+  {% for error in field.errors %}<p class="error">{{ error }}</p>{% endfor %}
+{% endmacro %}
+
+{% macro choices(field) %}
+  <div class="choices">
+    {% for option in field %}
+      <label class="choice">{{ option() }}<i class="bi {{ icons[option.data] }}"></i>{{ option.label.text }}</label>
+    {% endfor %}
+  </div>
+{% endmacro %}
+
+{% block title %}Report waste · LocWaste{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+{% endblock %}
+
+{% block content %}
+<div class="page">
+  <h1>Report a waste point</h1>
+  <p class="sub">Your report updates the map right away and helps the model predict where waste will accumulate.</p>
+  <div class="stepper" id="stepper">
+    <div class="on"><span>1</span>Location</div>
+    <div><span>2</span>What you see</div>
+    <div><span>3</span>Send</div>
+  </div>
+
+  <form method="post" class="report-grid" id="reportForm" novalidate
+        data-locate-url="{{ url_for('api.locate') }}">
+    {{ form.hidden_tag() }}
+    <div class="card report-map">
+      <div id="reportMap" aria-label="Map to place the waste point"></div>
+      <div class="card hint"><i class="bi bi-hand-index"></i>Tap the map to move the pin</div>
+    </div>
+
+    <div class="card form">
+      <div>
+        <span class="label">Detected location</span>
+        <div class="zone-chips" id="zoneChips" aria-live="polite"></div>
+        {{ errors(form.latitude) }}{{ errors(form.longitude) }}
+      </div>
+      <div>
+        <span class="label">{{ form.waste_type.label.text }}</span>
+        {{ choices(form.waste_type) }}
+        {{ errors(form.waste_type) }}
+      </div>
+      <div>
+        <span class="label">{{ form.size.label.text }}</span>
+        {{ choices(form.size) }}
+        {{ errors(form.size) }}
+      </div>
+      <div>
+        <span class="label">Anything else?</span>
+        <div class="checks">
+          {% for field in [form.has_rodents, form.has_insects, form.has_odor, form.near_water] %}
+            <label class="check">{{ field() }} {{ field.label.text }}</label>
+          {% endfor %}
+        </div>
+      </div>
+      <div>
+        {{ form.description(class_="input", rows=2, maxlength=500, placeholder="Add a note (optional)", **{"aria-label": "Note"}) }}
+        {{ errors(form.description) }}
+      </div>
+      <button class="btn btn-brand send" id="sendReport" type="submit">Send report</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="{{ url_for('static', filename='js/map.js') }}"></script>
+<script src="{{ url_for('static', filename='js/report_form.js') }}"></script>
+{% endblock %}

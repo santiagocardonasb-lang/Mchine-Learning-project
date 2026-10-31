@@ -37,10 +37,14 @@ def create_app(config_name: str | None = None) -> Flask:
     from app.blueprints.api import api_bp
     from app.blueprints.auth import auth_bp
     from app.blueprints.main import main_bp
+    from app.blueprints.map import map_bp
+    from app.blueprints.reports import reports_bp
     from app.commands import register_commands
 
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp)
     app.register_blueprint(auth_bp)
+    app.register_blueprint(map_bp)
+    app.register_blueprint(reports_bp)
     register_commands(app)
     return app

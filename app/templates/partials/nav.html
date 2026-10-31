@@ -17,6 +17,6 @@
       {% endif %}
     </div>
   </div>
-  <a class="btn btn-brand report-btn" href="/reports/new" aria-label="Report waste"><i class="bi bi-geo-alt-fill"></i><span class="btn-text">Report waste</span></a>
+  <a class="btn btn-brand report-btn" href="{{ url_for('reports.new') }}" aria-label="Report waste"><i class="bi bi-geo-alt-fill"></i><span class="btn-text">Report waste</span></a>
   <button class="icon-btn menu-btn" id="menu-toggle" type="button" aria-label="Menu" aria-controls="nav-menu" aria-expanded="false"><i class="bi bi-list"></i></button>
 </nav>
