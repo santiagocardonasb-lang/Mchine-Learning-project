@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+{% endblock %}
+
+{% block content %}
+<div class="wrap">
+  <div class="hero">
+    <div>
+      <span class="eyebrow"><i class="bi bi-stars"></i>Prevention, not reaction</span>
+      <h1>Know where waste <em>will pile up</em> in Bogotá — before it becomes a health risk.</h1>
+      <p class="lead">Citizens report accumulation points. LocWaste maps them and a Machine Learning model predicts which zones are at risk next month, so collection can get there first.</p>
+      <div class="ctas">
+        <a class="btn btn-brand" href="{{ url_for('reports.new') }}"><i class="bi bi-geo-alt-fill"></i>Report a waste point</a>
+        <a class="btn btn-soft" href="{{ url_for('map.index') }}"><i class="bi bi-map"></i>Explore the risk map</a>
+      </div>
+    </div>
+    <div class="card preview">
+      <div id="homeMap" aria-label="Map of Bogotá with locality and UPZ boundaries" role="img"></div>
+      <div class="card float f1"><span class="label">Reports this month</span><b>{{ reports_this_month }}</b></div>
+      {% if priority_zones %}
+        {% set top = priority_zones[0] %}
+        <div class="card float f2">
+          <span class="label">Highest risk next month</span>
+          <b class="zone-name">{{ top.upz }}</b>
+          <span class="pill high"><span class="dot"></span>High · {{ (top.probability * 100) | round | int }}%</span>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% block home_stats %}{% endblock %}
+
+  <div class="steps">
+    <div class="card step">
+      <div class="num brand"><i class="bi bi-geo-alt"></i></div>
+      <h3>1. Report</h3>
+      <p>Drop a pin where you see waste piling up and say what's there. It takes less than a minute.</p>
+    </div>
+    <div class="card step">
+      <div class="num medium"><i class="bi bi-fire"></i></div>
+      <h3>2. See the hotspots</h3>
+      <p>Every report joins a heat map of the city, by locality, UPZ and neighborhood.</p>
+    </div>
+    <div class="card step">
+      <div class="num high"><i class="bi bi-graph-up-arrow"></i></div>
+      <h3>3. Anticipate the risk</h3>
+      <p>A model trained on the history predicts low, medium or high risk for each zone next month.</p>
+    </div>
+  </div>
+
+  <div class="section-head">
+    <h2>Priority zones for next month</h2>
+    <a class="btn btn-ghost" href="{{ url_for('map.index') }}">See all on the map <i class="bi bi-arrow-right"></i></a>
+  </div>
+  {% if priority_zones %}
+    <div class="zones">
+      {% for zone in priority_zones %}
+        <a class="card zone" href="{{ url_for('map.index') }}">
+          <span class="pill high"><span class="dot"></span>High · {{ (zone.probability * 100) | round | int }}%</span>
+          <div class="name">{{ zone.upz }}</div>
+          <small>{{ zone.locality }}</small>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="card empty"><i class="bi bi-hourglass-split"></i>Predictions appear after the first model run</div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="{{ url_for('static', filename='js/map.js') }}"></script>
+<script>
+  initRiskMap(document.getElementById('homeMap'), {
+    upzUrl: "{{ url_for('api.upz') }}",
+    localitiesUrl: "{{ url_for('api.localities') }}",
+    interactive: false,
+    // Extra left padding keeps the city clear of the "Reports this month" card.
+    fitOptions: {paddingTopLeft: [120, 10], paddingBottomRight: [10, 10]},
+  });
+</script>
+{% endblock %}

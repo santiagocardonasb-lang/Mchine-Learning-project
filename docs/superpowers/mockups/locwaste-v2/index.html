@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LocWaste · Mockup v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{
+  --canvas:#f5f6f2;--surface:#ffffff;--subtle:#eef0ea;--line:#e2e5dc;
+  --fg:#1f2a26;--fg-muted:#5b6660;--fg-faint:#8a948e;
+  --brand:#2f6b5a;--brand-soft:#e3efe9;--on-brand:#ffffff;
+  --low:#5f9e7c;--low-soft:#e6f2ea;--medium:#d39a4f;--medium-soft:#fbf0e0;--high:#d9706a;--high-soft:#fbe8e5;
+  --shadow:31 42 38;--map-line:#7c8781;
+}
+html.dark{
+  --canvas:#141816;--surface:#1b201e;--subtle:#232a27;--line:#2e3632;
+  --fg:#eef2ef;--fg-muted:#a9b3ad;--fg-faint:#7f8984;
+  --brand:#7cc2a9;--brand-soft:#1f3a31;--on-brand:#0f1513;
+  --low:#7cc2a0;--low-soft:#1d3329;--medium:#e6b46f;--medium-soft:#3a2d1a;--high:#ec8f88;--high-soft:#3d2321;
+  --shadow:0 0 0;--map-line:#9aa49f;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Plus Jakarta Sans",system-ui,sans-serif;background:var(--canvas);color:var(--fg);font-size:15px;line-height:1.5}
+a{color:inherit;text-decoration:none}
+button{font:inherit}
+.nav{height:64px;display:flex;align-items:center;gap:24px;padding:0 28px;background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:1000}
+.brand{display:flex;align-items:center;gap:9px;font-weight:800;font-size:18px;letter-spacing:-.02em;cursor:pointer}
+.brand i{display:grid;place-items:center;width:32px;height:32px;border-radius:9px;background:var(--brand-soft);color:var(--brand);font-size:17px}
+.links{display:flex;gap:2px}
+.links a{padding:8px 13px;border-radius:9px;color:var(--fg-muted);font-weight:600;cursor:pointer}
+.links a:hover{color:var(--fg)}
+.links a.active{color:var(--brand);background:var(--brand-soft)}
+.nav .right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.btn{border:0;border-radius:11px;padding:11px 18px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+.btn-brand{background:var(--brand);color:var(--on-brand);box-shadow:0 6px 16px -6px rgb(47 107 90/.6)}
+.btn-soft{background:var(--subtle);color:var(--fg)}
+.btn-ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}
+.icon-btn{width:40px;height:40px;border-radius:11px;border:1px solid var(--line);background:transparent;color:var(--fg);cursor:pointer;font-size:16px}
+.view{display:none}.view.active{display:block}
+.label{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-faint)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:0 1px 2px rgb(var(--shadow)/.04),0 8px 24px -12px rgb(var(--shadow)/.10)}
+.input,select.input{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:11px;background:var(--surface);color:var(--fg);font:inherit;font-size:14px}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700}
+.pill.low{background:var(--low-soft);color:var(--low)}.pill.medium{background:var(--medium-soft);color:var(--medium)}.pill.high{background:var(--high-soft);color:var(--high)}
+.dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+.wrap{max-width:1180px;margin:0 auto;padding:0 28px}
+
+/* Home */
+.hero{display:grid;grid-template-columns:1fr 1.15fr;gap:48px;align-items:center;padding:56px 0 40px}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;background:var(--brand-soft);color:var(--brand);font-weight:700;font-size:13px}
+.hero h1{font-size:46px;line-height:1.08;letter-spacing:-.04em;margin:18px 0 16px;font-weight:800}
+.hero h1 em{font-style:normal;color:var(--brand)}
+.hero p.lead{font-size:17px;color:var(--fg-muted);margin:0 0 28px;max-width:470px}
+.hero .ctas{display:flex;gap:12px;flex-wrap:wrap}
+.preview{position:relative;height:440px;overflow:hidden;padding:0}
+#homeMap{height:100%;border-radius:18px}
+.preview .float{position:absolute;z-index:500;padding:12px 14px}
+.preview .f1{left:16px;top:16px}.preview .f2{right:16px;bottom:16px;max-width:230px}
+.float b{display:block;font-size:22px;letter-spacing:-.03em}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;padding:12px 0 48px}
+.step{padding:24px}
+.step .num{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;font-size:19px;margin-bottom:14px}
+.step h3{margin:0 0 6px;font-size:17px;letter-spacing:-.02em}
+.step p{margin:0;color:var(--fg-muted);font-size:14px}
+.section-head{display:flex;align-items:end;justify-content:space-between;margin-bottom:16px}
+.section-head h2{margin:0;font-size:24px;letter-spacing:-.03em}
+.zones{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;padding-bottom:56px}
+.zone{padding:16px;cursor:pointer}
+.zone .name{font-weight:700;margin:10px 0 2px}
+.zone small{color:var(--fg-faint)}
+
+/* Map page */
+.map-page{position:relative;height:calc(100vh - 64px)}
+#map{position:absolute;inset:0;background:var(--subtle)}
+.topbar{position:absolute;z-index:600;left:20px;top:20px;right:20px;display:flex;gap:10px;align-items:center;pointer-events:none}
+.topbar>*{pointer-events:auto}
+.search{display:flex;align-items:center;gap:8px;padding:6px 6px 6px 14px;width:min(420px,100%)}
+.search input{border:0;outline:0;flex:1;background:transparent;color:var(--fg);font:inherit;font-size:14px}
+.search select{border:0;background:var(--subtle);color:var(--fg);border-radius:9px;padding:8px 10px;font:inherit;font-size:13px;font-weight:600}
+.chips{display:flex;gap:6px;padding:5px}
+.chips button{border:0;background:transparent;color:var(--fg-muted);padding:8px 12px;border-radius:9px;font-weight:600;font-size:13px;cursor:pointer}
+.chips button.on{background:var(--brand-soft);color:var(--brand)}
+.side{position:absolute;z-index:600;left:20px;top:84px;width:300px;padding:18px;display:flex;flex-direction:column;gap:16px;max-height:calc(100% - 104px);overflow:auto}
+.side h2{margin:0;font-size:18px;letter-spacing:-.02em}
+.side p{margin:2px 0 0;color:var(--fg-muted);font-size:13px}
+.mini-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mini-stats div{background:var(--subtle);border-radius:12px;padding:10px 12px}
+.mini-stats b{display:block;font-size:20px;letter-spacing:-.03em}
+.prio-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);cursor:pointer;font-size:14px}
+.prio-row:last-child{border:0}
+.prio-row .n{width:18px;color:var(--fg-faint);font-weight:700}
+.prio-row .name{flex:1;font-weight:600}
+.prio-row small{display:block;color:var(--fg-faint);font-weight:500;font-size:12px}
+.detail{position:absolute;z-index:600;right:20px;top:84px;width:300px;padding:20px;display:none;flex-direction:column;gap:14px}
+.detail.open{display:flex}
+.detail h3{margin:0;font-size:20px;letter-spacing:-.02em}
+.detail .kv{display:flex;justify-content:space-between;font-size:14px;padding:6px 0;border-bottom:1px solid var(--line)}
+.detail .kv span{color:var(--fg-muted)}
+.legend{position:absolute;z-index:600;right:20px;bottom:24px;padding:12px 14px;display:flex;gap:14px;align-items:center;font-size:13px;font-weight:600}
+.legend .sw{width:12px;height:12px;border-radius:4px;display:inline-block;margin-right:6px;vertical-align:-1px}
+.layers{display:flex;flex-direction:column;gap:4px}
+.toggle{display:flex;align-items:center;justify-content:space-between;padding:6px 0;font-size:14px}
+.switch{width:34px;height:20px;border-radius:999px;background:var(--line);position:relative;cursor:pointer;flex-shrink:0}
+.switch::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.15s;box-shadow:0 1px 2px rgb(0 0 0/.2)}
+.switch.on{background:var(--brand)}.switch.on::after{left:16px}
+.leaflet-tooltip.zone-tip{background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px -8px rgb(var(--shadow)/.25);padding:9px 11px;font-family:inherit}
+.loc-label{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--fg-muted);text-shadow:0 0 3px var(--surface),0 0 3px var(--surface),0 0 3px var(--surface);white-space:nowrap}
+.leaflet-container{font-family:inherit}
+
+/* Report */
+.page{max-width:1080px;margin:0 auto;padding:36px 28px}
+.page h1{font-size:30px;letter-spacing:-.035em;margin:0 0 4px}
+.page .sub{color:var(--fg-muted);margin:0 0 24px}
+.stepper{display:flex;gap:8px;margin-bottom:22px}
+.stepper div{display:flex;align-items:center;gap:8px;padding:8px 14px 8px 8px;border-radius:999px;background:var(--surface);border:1px solid var(--line);font-weight:600;font-size:14px;color:var(--fg-muted)}
+.stepper span{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--subtle);font-size:12px;font-weight:800}
+.stepper .on{color:var(--brand);border-color:var(--brand)}.stepper .on span{background:var(--brand);color:var(--on-brand)}
+.stepper .done span{background:var(--brand-soft);color:var(--brand)}
+.report-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:20px;align-items:stretch}
+.report-map{overflow:hidden;position:relative;min-height:540px}
+#reportMap{position:absolute;inset:0}
+.hint{position:absolute;z-index:500;left:14px;top:14px;padding:10px 12px;font-size:13px;font-weight:600;display:flex;gap:8px;align-items:center}
+.form{padding:24px;display:flex;flex-direction:column;gap:18px}
+.zone-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.chip{padding:7px 11px;border-radius:9px;background:var(--brand-soft);color:var(--brand);font-weight:700;font-size:13px}
+.chip span{opacity:.7;font-weight:500;margin-right:4px}
+.choices{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.choice{border:1px solid var(--line);border-radius:12px;padding:12px 8px;text-align:center;font-weight:600;font-size:14px;cursor:pointer;display:flex;flex-direction:column;gap:4px;align-items:center}
+.choice i{font-size:18px;color:var(--fg-faint)}
+.choice.on{border-color:var(--brand);background:var(--brand-soft);color:var(--brand)}.choice.on i{color:var(--brand)}
+.checks{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.check{display:flex;gap:9px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:12px;font-weight:600;font-size:14px;cursor:pointer}
+.check input{accent-color:var(--brand)}
+
+/* Model */
+.model-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.model-grid .card{padding:22px}
+.model-grid h3{margin:0 0 14px;font-size:16px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:10px 6px;border-bottom:1px solid var(--line)}
+th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--fg-faint)}
+tr.best td{font-weight:700}
+.params{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.param{padding:11px 13px;border-radius:12px;background:var(--subtle)}
+.param code{display:block;font-size:11px;color:var(--fg-faint)}
+.cm{display:grid;grid-template-columns:70px repeat(3,1fr);gap:5px;text-align:center;font-weight:700}
+.cm div{padding:13px 0;border-radius:8px;background:var(--subtle)}
+.cm .h{background:none;color:var(--fg-faint);font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+.bars .bar{display:grid;grid-template-columns:160px 1fr 40px;align-items:center;gap:10px;margin-bottom:10px;font-weight:600;font-size:14px}
+.bars .track{height:8px;background:var(--subtle);border-radius:4px}
+.bars .fill{height:100%;background:var(--brand);border-radius:4px;opacity:.85}
+.note{color:var(--fg-muted);line-height:1.65;margin:0}
+.auth{min-height:calc(100vh - 64px);display:grid;place-items:center}
+.auth .card{width:390px;padding:30px;display:flex;flex-direction:column;gap:14px}
+.auth h1{margin:0;font-size:24px;letter-spacing:-.03em}
+.tag{position:fixed;left:50%;transform:translateX(-50%);bottom:12px;z-index:2000;background:var(--medium-soft);color:var(--medium);padding:5px 12px;border-radius:999px;font-weight:700;font-size:11px;letter-spacing:.05em;text-transform:uppercase}
+
+@media (max-width:900px){
+  .links{display:none}
+  .hero,.report-grid,.model-grid{grid-template-columns:1fr}
+  .hero h1{font-size:34px}
+  .steps,.zones{grid-template-columns:1fr 1fr}
+  .side{display:none}
+  .detail{left:20px;right:20px;width:auto;top:auto;bottom:80px}
+  .nav .btn-ghost{display:none}
+}
+</style>
+</head>
+<body>
+<div class="tag">Mockup · illustrative numbers, real Bogotá boundaries</div>
+
+<nav class="nav">
+  <a class="brand" data-view="home"><i class="bi bi-recycle"></i>LocWaste</a>
+  <div class="links">
+    <a data-view="home" class="active">Home</a>
+    <a data-view="map">Risk map</a>
+    <a data-view="model">Model</a>
+    <a>How it works</a>
+  </div>
+  <div class="right">
+    <button class="icon-btn" id="theme" title="Toggle theme"><i class="bi bi-moon"></i></button>
+    <button class="btn btn-ghost" data-view="auth">Sign in</button>
+    <button class="btn btn-brand" data-view="report"><i class="bi bi-geo-alt-fill"></i>Report waste</button>
+  </div>
+</nav>
+
+<!-- HOME -->
+<section class="view active" id="view-home">
+  <div class="wrap">
+    <div class="hero">
+      <div>
+        <span class="eyebrow"><i class="bi bi-stars"></i>Prevention, not reaction</span>
+        <h1>Know where waste <em>will pile up</em> in Bogotá — before it becomes a health risk.</h1>
+        <p class="lead">Citizens report accumulation points. LocWaste maps them and a Machine Learning model predicts which zones are at risk next month, so collection can get there first.</p>
+        <div class="ctas">
+          <button class="btn btn-brand" data-view="report"><i class="bi bi-geo-alt-fill"></i>Report a waste point</button>
+          <button class="btn btn-soft" data-view="map"><i class="bi bi-map"></i>Explore the risk map</button>
+        </div>
+      </div>
+      <div class="card preview">
+        <div id="homeMap"></div>
+        <div class="card float f1"><span class="label">Reports this month</span><b>812</b></div>
+        <div class="card float f2"><span class="label">Highest risk next month</span><b style="font-size:17px">Bosa Central</b><span class="pill high" style="margin-top:6px"><span class="dot"></span>High · 91%</span></div>
+      </div>
+    </div>
+
+    <div class="steps">
+      <div class="card step">
+        <div class="num" style="background:var(--brand-soft);color:var(--brand)"><i class="bi bi-geo-alt"></i></div>
+        <h3>1. Report</h3>
+        <p>Drop a pin where you see waste piling up and say what's there. It takes less than a minute.</p>
+      </div>
+      <div class="card step">
+        <div class="num" style="background:var(--medium-soft);color:var(--medium)"><i class="bi bi-fire"></i></div>
+        <h3>2. See the hotspots</h3>
+        <p>Every report joins a heat map of the city, by locality, UPZ and neighborhood.</p>
+      </div>
+      <div class="card step">
+        <div class="num" style="background:var(--high-soft);color:var(--high)"><i class="bi bi-graph-up-arrow"></i></div>
+        <h3>3. Anticipate the risk</h3>
+        <p>A model trained on the history predicts low, medium or high risk for each zone next month.</p>
+      </div>
+    </div>
+
+    <div class="section-head">
+      <h2>Priority zones for next month</h2>
+      <a class="btn btn-ghost" data-view="map">See all on the map <i class="bi bi-arrow-right"></i></a>
+    </div>
+    <div class="zones" id="homeZones"></div>
+  </div>
+</section>
+
+<!-- MAP -->
+<section class="view" id="view-map">
+  <div class="map-page">
+    <div id="map"></div>
+    <div class="topbar">
+      <div class="card search">
+        <i class="bi bi-search" style="color:var(--fg-faint)"></i>
+        <input placeholder="Search a neighborhood or UPZ">
+        <select id="locSelect"><option value="">All localities</option></select>
+      </div>
+      <div class="card chips" id="period"><button>Last month</button><button class="on">3 months</button><button>12 months</button></div>
+    </div>
+    <aside class="card side">
+      <div><h2>Bogotá at a glance</h2><p>Risk predicted for November 2026</p></div>
+      <div class="mini-stats">
+        <div><span class="label">Reports</span><b>812</b></div>
+        <div><span class="label">High-risk UPZ</span><b style="color:var(--high)">37</b></div>
+      </div>
+      <div><span class="label">Top priority</span><div id="prio"></div></div>
+      <div class="layers"><span class="label">Show on map</span>
+        <div class="toggle">Report hotspots <div class="switch on" data-layer="heat"></div></div>
+        <div class="toggle">Risk by zone <div class="switch on" data-layer="risk"></div></div>
+        <div class="toggle">Locality names <div class="switch on" data-layer="loc"></div></div>
+      </div>
+    </aside>
+    <div class="card detail" id="detail"></div>
+    <div class="card legend">
+      <span class="label">Risk</span>
+      <span><i class="sw" style="background:var(--low)"></i>Low</span>
+      <span><i class="sw" style="background:var(--medium)"></i>Medium</span>
+      <span><i class="sw" style="background:var(--high)"></i>High</span>
+    </div>
+  </div>
+</section>
+
+<!-- REPORT -->
+<section class="view" id="view-report">
+  <div class="page">
+    <h1>Report a waste point</h1>
+    <p class="sub">Your report updates the map right away and helps the model predict where waste will accumulate.</p>
+    <div class="stepper"><div class="done"><span>1</span>Location</div><div class="on"><span>2</span>What you see</div><div><span>3</span>Send</div></div>
+    <div class="report-grid">
+      <div class="card report-map">
+        <div id="reportMap"></div>
+        <div class="card hint"><i class="bi bi-hand-index" style="color:var(--brand)"></i>Tap the map to move the pin</div>
+      </div>
+      <div class="card form">
+        <div><span class="label">Detected location</span>
+          <div class="zone-chips"><div class="chip"><span>Locality</span>Kennedy</div><div class="chip"><span>UPZ</span>Patio Bonito</div><div class="chip"><span>Neighborhood</span>Tintal Sur</div></div>
+        </div>
+        <div><span class="label">What kind of waste?</span>
+          <div class="choices">
+            <div class="choice on"><i class="bi bi-bag"></i>Household</div><div class="choice"><i class="bi bi-bricks"></i>Debris</div><div class="choice"><i class="bi bi-box-seam"></i>Bulky</div>
+            <div class="choice"><i class="bi bi-flower1"></i>Organic</div><div class="choice"><i class="bi bi-shuffle"></i>Mixed</div>
+          </div>
+        </div>
+        <div><span class="label">How big is it?</span>
+          <div class="choices">
+            <div class="choice">A few bags</div><div class="choice on">A pile</div><div class="choice">Blocks the way</div>
+          </div>
+        </div>
+        <div><span class="label">Anything else?</span>
+          <div class="checks">
+            <label class="check"><input type="checkbox" checked> Rodents</label>
+            <label class="check"><input type="checkbox"> Insects</label>
+            <label class="check"><input type="checkbox" checked> Strong odor</label>
+            <label class="check"><input type="checkbox"> Near a river or canal</label>
+          </div>
+        </div>
+        <textarea class="input" rows="2" style="resize:none" placeholder="Add a note (optional)"></textarea>
+        <button class="btn btn-brand" style="justify-content:center;padding:14px">Send report</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MODEL -->
+<section class="view" id="view-model">
+  <div class="page">
+    <h1>How the prediction works</h1>
+    <p class="sub">Random forest trained on 12,096 zone-months · last run Oct 30, 2026 · started automatically after 50 new reports</p>
+    <div class="model-grid">
+      <div class="card"><h3>Model comparison · 5-fold time-series CV</h3>
+        <table>
+          <tr><th>Model</th><th>Macro F1</th><th>Recall high</th><th>Accuracy</th></tr>
+          <tr><td>Baseline (most frequent)</td><td>0.17 ± 0.01</td><td>0.00</td><td>0.34</td></tr>
+          <tr><td>Logistic regression</td><td>0.61 ± 0.04</td><td>0.66</td><td>0.63</td></tr>
+          <tr class="best"><td>Random forest <span class="pill low">active</span></td><td>0.72 ± 0.03</td><td>0.78</td><td>0.73</td></tr>
+        </table>
+      </div>
+      <div class="card"><h3>Parameters</h3>
+        <div class="params">
+          <div class="param"><code>TEST_MONTHS_FRACTION</code><b>0.20</b></div><div class="param"><code>N_SPLITS</code><b>5</b></div>
+          <div class="param"><code>N_ESTIMATORS</code><b>300</b></div><div class="param"><code>MAX_DEPTH</code><b>8</b></div>
+          <div class="param"><code>CLASS_WEIGHT</code><b>balanced</b></div><div class="param"><code>AUTO_RETRAIN_THRESHOLD</code><b>50</b></div>
+        </div>
+      </div>
+      <div class="card"><h3>Confusion matrix · test months</h3>
+        <div class="cm">
+          <div class="h"></div><div class="h">Pred low</div><div class="h">Pred med</div><div class="h">Pred high</div>
+          <div class="h">Low</div><div style="background:var(--low-soft);color:var(--low)">96</div><div>21</div><div>3</div>
+          <div class="h">Medium</div><div>24</div><div style="background:var(--medium-soft);color:var(--medium)">71</div><div>22</div>
+          <div class="h">High</div><div>2</div><div>25</div><div style="background:var(--high-soft);color:var(--high)">95</div>
+        </div>
+      </div>
+      <div class="card"><h3>What drives the risk</h3>
+        <div class="bars">
+          <div class="bar">Reports last month<div class="track"><div class="fill" style="width:92%"></div></div>0.24</div>
+          <div class="bar">3-month average<div class="track"><div class="fill" style="width:74%"></div></div>0.19</div>
+          <div class="bar">Real critical points<div class="track"><div class="fill" style="width:51%"></div></div>0.13</div>
+          <div class="bar">Share with vectors<div class="track"><div class="fill" style="width:38%"></div></div>0.10</div>
+          <div class="bar">Month of year<div class="track"><div class="fill" style="width:29%"></div></div>0.07</div>
+        </div>
+      </div>
+      <div class="card" style="grid-column:1/-1"><h3>Reading the errors</h3>
+        <p class="note">Most mistakes happen between neighboring classes. A high-risk zone is almost never predicted as low (2 of 122), which is the error that matters most for prioritizing collection.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- AUTH -->
+<section class="view" id="view-auth">
+  <div class="auth"><div class="card">
+    <div class="brand" style="font-size:16px"><i class="bi bi-recycle"></i>LocWaste</div>
+    <h1>Welcome back</h1>
+    <p class="note" style="margin-top:-8px">Sign in to report waste points and follow them.</p>
+    <input class="input" placeholder="Email"><input class="input" type="password" placeholder="Password">
+    <button class="btn btn-brand" style="justify-content:center;padding:13px">Sign in</button>
+    <p class="note" style="text-align:center">New here? <b style="color:var(--brand)">Create an account</b></p>
+  </div></div>
+</section>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script src="data.js"></script>
+<script>
+const v = n => getComputedStyle(document.documentElement).getPropertyValue('--' + n).trim();
+const tileUrl = () => document.documentElement.classList.contains('dark')
+  ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}'
+  : 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}';
+const CENTER = [4.63, -74.11];
+const heatGradient = {0.25: '#cfe5d6', 0.55: '#f1c98f', 0.85: '#e98f86', 1: '#d9706a'};
+const riskStyle = f => ({color: v(f.properties.level), weight: 1, opacity: .45, fillColor: v(f.properties.level), fillOpacity: .22});
+const topZones = UPZ.features.filter(f => f.properties.level === 'high').sort((a, b) => b.properties.reports - a.properties.reports).slice(0, 5);
+const maps = [];
+
+function baseMap(id, opts) {
+  const m = L.map(id, Object.assign({zoomControl: false, attributionControl: false}, opts));
+  m._base = L.tileLayer(tileUrl(), {maxZoom: 16}).addTo(m);
+  new ResizeObserver(() => m.invalidateSize()).observe(document.getElementById(id));
+  maps.push(m);
+  return m;
+}
+function addLayers(m, interactive) {
+  const risk = L.geoJSON(UPZ, {style: riskStyle, interactive, onEachFeature: interactive ? (f, l) => {
+    const p = f.properties;
+    l.bindTooltip(`<b>${p.name}</b><br><span class="pill ${p.level}" style="margin:5px 0"><span class="dot"></span>${p.level} risk</span>`, {sticky: true, className: 'zone-tip'});
+    l.on('mouseover', () => l.setStyle({weight: 2, fillOpacity: .38}));
+    l.on('mouseout', () => risk.resetStyle(l));
+    l.on('click', () => openDetail(f, m));
+  } : null}).addTo(m);
+  const heat = L.heatLayer(HEAT, {radius: 15, blur: 20, minOpacity: .2, gradient: heatGradient});
+  m.whenReady(() => requestAnimationFrame(() => heat.addTo(m)));
+  const lines = L.geoJSON(LOCALITIES, {interactive: false, style: () => ({color: v('map-line'), weight: 1.2, fill: false, opacity: .7})}).addTo(m);
+  const labels = L.layerGroup(LOCALITIES.features.map(f => L.marker(L.geoJSON(f).getBounds().getCenter(),
+    {interactive: false, icon: L.divIcon({className: 'loc-label', html: f.properties.name, iconSize: null})})));
+  m._risk = risk; m._lines = lines;
+  return {heat: [heat], risk: [risk], loc: [lines, labels]};
+}
+
+const homeMap = baseMap('homeMap', {dragging: false, scrollWheelZoom: false, doubleClickZoom: false});
+homeMap.fitBounds(L.geoJSON(UPZ).getBounds(), {paddingTopLeft: [120, 10], paddingBottomRight: [10, 10]});
+addLayers(homeMap, false);
+document.getElementById('homeZones').innerHTML = topZones.map(f => `
+  <div class="card zone" data-view="map"><span class="pill high"><span class="dot"></span>High · ${Math.round(f.properties.prob*100)}%</span>
+  <div class="name">${f.properties.name}</div><small>${f.properties.reports} reports in 3 months</small></div>`).join('');
+
+let map, layers;
+function initMap() {
+  map = baseMap('map', {}).setView(CENTER, 12);
+  L.control.zoom({position: 'bottomleft'}).addTo(map);
+  layers = addLayers(map, true);
+  layers.loc[1].addTo(map);
+  document.querySelectorAll('.switch').forEach(s => s.onclick = () => {
+    s.classList.toggle('on');
+    layers[s.dataset.layer].forEach(l => s.classList.contains('on') ? l.addTo(map) : map.removeLayer(l));
+  });
+}
+function openDetail(f, m) {
+  const p = f.properties, d = document.getElementById('detail');
+  d.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:start"><div><span class="label">UPZ</span><h3>${p.name}</h3></div>
+    <button class="icon-btn" onclick="this.closest('.detail').classList.remove('open')"><i class="bi bi-x-lg"></i></button></div>
+    <span class="pill ${p.level}" style="align-self:start"><span class="dot"></span>${p.level} risk next month · ${Math.round(p.prob*100)}%</span>
+    <div><div class="kv"><span>Reports · 3 months</span><b>${p.reports}</b></div><div class="kv"><span>Most common</span><b>Household</b></div>
+    <div class="kv"><span>With rodents or odor</span><b>41%</b></div><div class="kv"><span>Open reports</span><b>${Math.round(p.reports/6)}</b></div></div>
+    <button class="btn btn-brand" style="justify-content:center" onclick="show('report')"><i class="bi bi-geo-alt-fill"></i>Report here</button>`;
+  d.classList.add('open');
+  m.fitBounds(L.geoJSON(f).getBounds(), {maxZoom: 13, paddingTopLeft: [340, 40], paddingBottomRight: [340, 40]});
+}
+
+let reportMap;
+function initReport() {
+  reportMap = baseMap('reportMap', {}).setView([4.636, -74.165], 15);
+  let pin = L.circleMarker([4.636, -74.165], {radius: 10, color: '#fff', weight: 3, fillColor: v('brand'), fillOpacity: 1}).addTo(reportMap);
+  reportMap.on('click', e => pin.setLatLng(e.latlng));
+}
+
+function show(view) {
+  document.querySelectorAll('.view').forEach(s => s.classList.toggle('active', s.id === 'view-' + view));
+  document.querySelectorAll('.links a').forEach(a => a.classList.toggle('active', a.dataset.view === view));
+  if (view === 'map' && !map) initMap();
+  if (view === 'report' && !reportMap) initReport();
+  window.scrollTo(0, 0);
+}
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-view]');
+  if (el) show(el.dataset.view);
+});
+document.querySelectorAll('.chips button').forEach(b => b.onclick = () => {
+  b.parentElement.querySelectorAll('button').forEach(x => x.classList.remove('on')); b.classList.add('on');
+});
+document.querySelectorAll('.choices').forEach(g => g.querySelectorAll('.choice').forEach(c => c.onclick = () => {
+  g.querySelectorAll('.choice').forEach(x => x.classList.remove('on')); c.classList.add('on');
+}));
+
+const sel = document.getElementById('locSelect');
+LOCALITIES.features.map(f => f.properties.name).sort().forEach(n => sel.add(new Option(n, n)));
+sel.onchange = () => {
+  const f = LOCALITIES.features.find(x => x.properties.name === sel.value);
+  f ? map.fitBounds(L.geoJSON(f).getBounds(), {paddingTopLeft: [340, 80]}) : map.setView(CENTER, 12);
+};
+document.getElementById('prio').innerHTML = topZones.map((f, i) => `
+  <div class="prio-row" data-i="${i}"><span class="n">${i + 1}</span><span class="name">${f.properties.name}<small>${f.properties.reports} reports</small></span>
+  <span class="pill high">${Math.round(f.properties.prob*100)}%</span></div>`).join('');
+document.getElementById('prio').onclick = e => {
+  const r = e.target.closest('.prio-row');
+  if (r) openDetail(topZones[r.dataset.i], map);
+};
+
+document.getElementById('theme').onclick = () => {
+  const dark = document.documentElement.classList.toggle('dark');
+  document.querySelector('#theme i').className = dark ? 'bi bi-sun' : 'bi bi-moon';
+  maps.forEach(m => {
+    m._base.setUrl(tileUrl());
+    m._risk && m._risk.setStyle(riskStyle);
+    m._lines && m._lines.setStyle({color: v('map-line')});
+  });
+};
+</script>
+</body>
+</html>

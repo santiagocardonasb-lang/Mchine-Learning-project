@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}About · LocWaste{% endblock %}
+
+{% block content %}
+<div class="page">
+  <span class="label">About the project</span>
+  <h1>{{ content.PROJECT_TITLE }}</h1>
+  <p class="sub">A Machine Learning project for Bogotá, developed with the CRISP-DM methodology.</p>
+
+  <section class="card prose">
+    <h2>Problem statement</h2>
+    {% for paragraph in content.PROBLEM_STATEMENT %}
+      <p class="note">{{ paragraph }}</p>
+    {% endfor %}
+  </section>
+
+  <section class="card prose">
+    <h2>Research question</h2>
+    <p class="note">{{ content.RESEARCH_QUESTION }}</p>
+  </section>
+
+  <section class="card prose">
+    <h2>General objective</h2>
+    <p class="note">{{ content.GENERAL_OBJECTIVE }}</p>
+  </section>
+</div>
+{% endblock %}

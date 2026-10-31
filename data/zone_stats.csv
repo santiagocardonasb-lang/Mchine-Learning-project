@@ -1,0 +1,113 @@
+upz_code,upz_name,locality_code,locality_name,area_km2,critical_points,public_space_m2_per_inhabitant,collection_days_per_week
+1,Paseo de los Libertadores,1,Usaquén,6.348,0,5.373,0
+2,La Academia,11,Suba,6.762,0,11.867,0
+3,Guaymaral,11,Suba,4.564,0,140.356,0
+9,Verbenal,1,Usaquén,3.575,3,1.71,2.0
+10,La Uribe,1,Usaquén,3.474,1,4.885,2.0
+11,San Cristobal Norte,1,Usaquén,2.769,1,2.355,2.0
+12,Toberin,1,Usaquén,2.924,2,3.956,2.0
+13,Los Cedros,1,Usaquén,6.763,0,3.808,0
+14,Usaquen,1,Usaquén,4.956,0,6.901,0
+15,Country Club,1,Usaquén,2.873,0,7.615,0
+16,Santa Barbara,1,Usaquén,4.614,0,4.554,0
+17,San Jose de Bavaria,11,Suba,4.409,1,3.622,6.0
+18,Britalia,11,Suba,3.306,2,3.493,6.0
+19,El Prado,11,Suba,4.36,5,3.412,6.0
+20,La Alhambra,11,Suba,2.865,0,7.389,0
+21,Los Andes,12,Barrios Unidos,2.765,2,7.018,1.0
+22,Doce de Octubre,12,Barrios Unidos,3.383,9,2.16,1.33
+23,Casa Blanca Suba,11,Suba,4.23,0,6.328,0
+24,Niza,11,Suba,7.611,1,11.272,6.0
+25,La Floresta,11,Suba,3.958,0,6.312,0
+26,Las Ferias,10,Engativá,4.762,13,2.958,1.08
+27,Suba,11,Suba,6.569,5,3.066,6.0
+28,El Rincon,11,Suba,7.144,11,1.753,6.0
+29,Minuto de Dios,10,Engativá,3.755,6,3.58,1.33
+30,Boyaca Real,10,Engativá,4.565,11,2.657,1.36
+31,Santa Cecilia,10,Engativá,3.104,2,3.905,1.0
+32,San Blas,4,San Cristóbal,4.024,4,2.793,2.0
+33,Sosiego,4,San Cristóbal,2.363,4,6.112,2.0
+34,20 de Julio,4,San Cristóbal,2.641,3,2.268,2.0
+35,Ciudad Jardin,15,Antonio Nariño,1.34,3,3.422,2.67
+36,San Jose,18,Rafael Uribe Uribe,2.092,5,6.403,3.6
+37,Santa Isabel,14,Los Mártires,2.016,3,1.609,4.0
+38,Restrepo,15,Antonio Nariño,3.568,15,3.59,2.13
+39,Quiroga,18,Rafael Uribe Uribe,3.777,11,2.159,2.0
+40,Ciudad Montes,16,Puente Aranda,4.482,1,5.495,1.0
+41,Muzu,16,Puente Aranda,2.543,2,4.186,1.0
+42,Venecia,6,Tunjuelito,6.677,5,6.603,1.0
+43,San Rafael,16,Puente Aranda,3.313,1,3.112,1.0
+44,Americas,8,Kennedy,3.832,4,6.73,2.25
+45,Carvajal,8,Kennedy,4.412,14,3.31,2.14
+46,Castilla,8,Kennedy,5.062,5,3.779,3.0
+47,Kennedy Central,8,Kennedy,3.392,2,2.555,1.0
+48,Timiza,8,Kennedy,4.33,12,5.225,2.08
+49,Apogeo,7,Bosa,2.118,2,4.672,1.0
+50,La Gloria,4,San Cristóbal,3.881,15,3.038,2.0
+51,Los Libertadores,4,San Cristóbal,3.67,5,3.879,2.0
+52,La Flora,5,Usme,1.888,0,3.592,0
+53,Marco Fidel Suarez,18,Rafael Uribe Uribe,1.856,4,3.647,4.5
+54,Marruecos,18,Rafael Uribe Uribe,3.65,4,2.225,2.5
+55,Diana Turbay,18,Rafael Uribe Uribe,2.127,6,2.805,3.0
+56,Danubio,5,Usme,2.904,1,3.501,2.0
+57,Gran Yomasa,5,Usme,5.389,5,3.366,2.0
+58,Comuneros,5,Usme,4.959,3,3.912,2.0
+59,Alfonso Lopez,5,Usme,2.177,0,2.821,0
+60,Parque Entrenubes,5,Usme,4.215,0,274.739,0
+61,Ciudad Usme,5,Usme,9.267,1,4.304,2.0
+62,Tunjuelito,6,Tunjuelito,3.291,5,1.276,4.0
+63,El Mochuelo,19,Ciudad Bolivar,3.186,0,26.428,0
+64,Monte Blanco,19,Ciudad Bolivar,6.997,0,1.302,0
+65,Arborizadora,19,Ciudad Bolivar,3.081,10,4.409,2.2
+66,San Francisco,19,Ciudad Bolivar,1.796,7,1.691,1.29
+67,Lucero,19,Ciudad Bolivar,5.898,10,1.865,1.3
+68,El Tesoro,19,Ciudad Bolivar,2.121,3,2.971,1.0
+69,Ismael Perdomo,19,Ciudad Bolivar,5.632,2,5.389,2.0
+70,Jerusalem,19,Ciudad Bolivar,5.406,6,5.563,2.0
+71,Tibabuyes,11,Suba,7.308,17,2.11,6.0
+72,Bolivia,10,Engativá,4.774,1,8.135,1.0
+73,Garces Navas,10,Engativá,5.584,9,8.891,1.67
+74,Engativa,10,Engativá,5.912,10,14.07,1.0
+75,Fontibon,9,Fontibón,4.994,11,1.834,2.73
+76,Fontibon San Pablo,9,Fontibón,3.621,5,3.239,2.6
+77,Zona Franca,9,Fontibón,4.945,4,2.558,2.0
+78,Tintal Norte,8,Kennedy,3.454,0,3.045,0
+79,Calandaima,8,Kennedy,3.208,6,2.539,1.5
+80,Corabastos,8,Kennedy,1.856,8,1.746,3.75
+81,Gran Britalia,8,Kennedy,1.81,6,4.358,2.67
+82,Patio Bonito,8,Kennedy,3.192,12,1.507,1.75
+83,Las Margaritas,8,Kennedy,1.481,2,21.342,2.0
+84,Bosa Occidental,7,Bosa,4.329,13,0.961,2.15
+85,Bosa Central,7,Bosa,7.189,23,2.329,1.74
+86,El Porvenir,7,Bosa,4.638,11,2.067,2.0
+87,Tintal Sur,7,Bosa,5.803,6,2.137,1.67
+88,El Refugio,2,Chapinero,3.38,0,3.919,0
+89,San Isidro - Patios,2,Chapinero,1.137,0,0,0
+90,Pardo Rubio,2,Chapinero,2.869,2,2.73,2.0
+91,Sagrado Corazon,3,Santa Fe,1.476,2,108.18,2.0
+92,La Macarena,3,Santa Fe,0.858,0,130.781,0
+93,Las Nieves,3,Santa Fe,1.736,5,13.442,2.2
+94,La Candelaria,17,La Candelaria,2.072,1,5.453,2.0
+95,Las Cruces,3,Santa Fe,0.929,8,1.29,2.0
+96,Lourdes,3,Santa Fe,2.013,2,4.644,2.0
+97,Chico Lago,2,Chapinero,4.25,2,8.385,2.0
+98,Los Alcazares,12,Barrios Unidos,4.165,6,2.283,1.17
+99,Chapinero,2,Chapinero,1.602,3,4.387,2.0
+100,Galerias,13,Teusaquillo,2.39,3,3.253,1.0
+101,Teusaquillo,13,Teusaquillo,2.371,1,1.43,1.0
+102,La Sabana,14,Los Mártires,4.536,16,3.832,3.56
+103,Parque Salitre,12,Barrios Unidos,1.662,0,962.744,0
+104,Parque Simon Bolivar - CAN,13,Teusaquillo,4.01,0,357.33,0
+105,Jardin Botanico,10,Engativá,1.627,0,229.003,0
+106,La Esmeralda,13,Teusaquillo,1.94,0,4.935,0
+107,Quinta Paredes,13,Teusaquillo,1.75,2,1.846,1.5
+108,Zona Industrial,16,Puente Aranda,3.49,4,19.532,1.5
+109,Ciudad Salitre Oriental,13,Teusaquillo,1.816,0,8.687,0
+110,Ciudad Salitre Occidental,9,Fontibón,2.27,0,5.574,0
+111,Puente Aranda,16,Puente Aranda,3.586,1,4.118,1.0
+112,Granjas de Techo,9,Fontibón,4.804,3,5.057,3.67
+113,Bavaria,8,Kennedy,2.789,0,3.835,0
+114,Modelia,9,Fontibón,2.631,5,6.658,2.0
+115,Capellania,9,Fontibón,2.737,6,7.494,1.67
+116,Alamos,10,Engativá,2.014,4,11.624,1.25
+117,Aeropuerto el Dorado,9,Fontibón,7.475,0,5.907,0
