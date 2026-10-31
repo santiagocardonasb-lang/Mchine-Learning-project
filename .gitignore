@@ -17,3 +17,7 @@ PLAN_PROYECTO.md
 instance/
 .env
 .superpowers/
+
+# Cadastral sectors are large and re-downloaded by scripts/prepare_geo.py
+data/raw/sector_catastral*
+data/raw/*.zip
