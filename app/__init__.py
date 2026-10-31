@@ -27,9 +27,11 @@ def create_app(config_name: str | None = None) -> Flask:
     csrf.init_app(app)
 
     from app import models  # noqa: F401  (registers tables so Flask-Migrate sees them)
+    from app.blueprints.api import api_bp
     from app.blueprints.main import main_bp
     from app.commands import register_commands
 
     app.register_blueprint(main_bp)
+    app.register_blueprint(api_bp)
     register_commands(app)
     return app
