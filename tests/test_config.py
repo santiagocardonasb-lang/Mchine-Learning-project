@@ -58,5 +58,5 @@ def test_empty_env_vars_fall_back_to_defaults(monkeypatch):
         importlib.reload(config)
 
 
-def test_home_responds(client):
+def test_home_responds(client, db_session):
     assert client.get("/").status_code == 200

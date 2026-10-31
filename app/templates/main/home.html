@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+{% endblock %}
+
+{% block content %}
+<div class="wrap">
+  <div class="hero">
+    <div>
+      <span class="eyebrow"><i class="bi bi-stars"></i>Prevention, not reaction</span>
+      <h1>Know where waste <em>will pile up</em> in Bogotá — before it becomes a health risk.</h1>
+      <p class="lead">Citizens report accumulation points. LocWaste maps them and a Machine Learning model predicts which zones are at risk next month, so collection can get there first.</p>
+      <div class="ctas">
+        <a class="btn btn-brand" href="/reports/new"><i class="bi bi-geo-alt-fill"></i>Report a waste point</a>
+        <a class="btn btn-soft" href="/map"><i class="bi bi-map"></i>Explore the risk map</a>
+      </div>
+    </div>
+    <div class="card preview">
+      <div id="homeMap" aria-label="Map of Bogotá with locality and UPZ boundaries" role="img"></div>
+      <div class="card float f1"><span class="label">Reports this month</span><b>{{ reports_this_month }}</b></div>
+      {% if priority_zones %}
+        {% set top = priority_zones[0] %}
+        <div class="card float f2">
+          <span class="label">Highest risk next month</span>
+          <b class="zone-name">{{ top.upz }}</b>
+          <span class="pill high"><span class="dot"></span>High · {{ (top.probability * 100) | round | int }}%</span>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="steps">
+    <div class="card step">
+      <div class="num brand"><i class="bi bi-geo-alt"></i></div>
+      <h3>1. Report</h3>
+      <p>Drop a pin where you see waste piling up and say what's there. It takes less than a minute.</p>
+    </div>
+    <div class="card step">
+      <div class="num medium"><i class="bi bi-fire"></i></div>
+      <h3>2. See the hotspots</h3>
+      <p>Every report joins a heat map of the city, by locality, UPZ and neighborhood.</p>
+    </div>
+    <div class="card step">
+      <div class="num high"><i class="bi bi-graph-up-arrow"></i></div>
+      <h3>3. Anticipate the risk</h3>
+      <p>A model trained on the history predicts low, medium or high risk for each zone next month.</p>
+    </div>
+  </div>
+
+  <div class="section-head">
+    <h2>Priority zones for next month</h2>
+    <a class="btn btn-ghost" href="/map">See all on the map <i class="bi bi-arrow-right"></i></a>
+  </div>
+  {% if priority_zones %}
+    <div class="zones">
+      {% for zone in priority_zones %}
+        <a class="card zone" href="/map">
+          <span class="pill high"><span class="dot"></span>High · {{ (zone.probability * 100) | round | int }}%</span>
+          <div class="name">{{ zone.upz }}</div>
+          <small>{{ zone.locality }}</small>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="card empty"><i class="bi bi-hourglass-split"></i>Predictions appear after the first model run</div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+(function () {
+  const css = name => getComputedStyle(document.documentElement).getPropertyValue('--' + name).trim();
+  const tileUrl = () => document.documentElement.classList.contains('dark')
+    ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}'
+    : 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}';
+  const upzStyle = () => ({color: css('map-line'), weight: .6, opacity: .45, fillColor: css('brand'), fillOpacity: .06});
+  const localityStyle = () => ({color: css('map-line'), weight: 1.2, opacity: .7, fill: false});
+
+  // Static preview: every interaction is off; the full map lives at /map.
+  const map = L.map('homeMap', {
+    zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, touchZoom: false, boxZoom: false, keyboard: false,
+  });
+  L.control.attribution({position: 'bottomleft', prefix: false}).addAttribution('Tiles &copy; Esri').addTo(map);
+  const tiles = L.tileLayer(tileUrl(), {maxZoom: 16}).addTo(map);
+  let upzLayer, localityLayer;
+
+  Promise.all([
+    fetch("{{ url_for('api.upz') }}").then(r => r.json()),
+    fetch("{{ url_for('api.localities') }}").then(r => r.json()),
+  ]).then(([upz, localities]) => {
+    upzLayer = L.geoJSON(upz, {interactive: false, style: upzStyle}).addTo(map);
+    localityLayer = L.geoJSON(localities, {interactive: false, style: localityStyle}).addTo(map);
+    fitCity();
+  });
+
+  function fitCity() {
+    // Extra left padding keeps the city clear of the "Reports this month" card.
+    if (upzLayer) map.fitBounds(upzLayer.getBounds(), {paddingTopLeft: [120, 10], paddingBottomRight: [10, 10]});
+  }
+
+  // The preview can't be panned, so refit on every resize to keep the whole city in view.
+  new ResizeObserver(() => { map.invalidateSize(); fitCity(); }).observe(document.getElementById('homeMap'));
+
+  document.addEventListener('themechange', () => {
+    tiles.setUrl(tileUrl());
+    if (upzLayer) upzLayer.setStyle(upzStyle());
+    if (localityLayer) localityLayer.setStyle(localityStyle());
+  });
+})();
+</script>
+{% endblock %}

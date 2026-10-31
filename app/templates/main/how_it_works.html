@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}How it works · LocWaste{% endblock %}
+
+{% block content %}
+<div class="page">
+  <h1>How it works</h1>
+  <p class="sub">{{ content.HOW_IT_WORKS_INTRO }}</p>
+
+  <div class="steps">
+    {% for step in content.HOW_IT_WORKS_STEPS %}
+      <div class="card step">
+        <div class="num {{ step.color }}"><i class="bi bi-{{ step.icon }}"></i></div>
+        <h3>{{ step.title }}</h3>
+        <p>{{ step.text }}</p>
+      </div>
+    {% endfor %}
+  </div>
+
+  <h2>Data sources</h2>
+  <div class="sources">
+    {% for source in content.DATA_SOURCES %}
+      <div class="card source">
+        <span class="label">{{ source.publisher }}</span>
+        <h3>{{ source.name }}</h3>
+        <p>{{ source.text }}</p>
+      </div>
+    {% endfor %}
+  </div>
+  <p class="note more">{{ content.SYNTHETIC_NOTE }}</p>
+
+  <p class="more"><a class="btn btn-ghost" href="{{ url_for('main.about') }}">About the project <i class="bi bi-arrow-right"></i></a></p>
+</div>
+{% endblock %}
