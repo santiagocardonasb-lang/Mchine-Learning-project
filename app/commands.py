@@ -5,7 +5,7 @@ import click
 from flask import Flask
 
 from app.extensions import db
-from app.models import Locality, Upz
+from app.models import Locality, Upz, User
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 
@@ -49,3 +49,26 @@ def register_commands(app: Flask) -> None:
         """Load localities and UPZ from data/zone_stats.csv and the population CSV."""
         localities, upzs = load_zones()
         click.echo(f"Loaded {localities} localities and {upzs} UPZ.")
+
+    @app.cli.command("create-admin")
+    @click.option("--email", required=True)
+    @click.option("--name", required=True)
+    def create_admin_command(email, name):
+        """Create an admin user, or promote an existing account to admin."""
+        email = email.strip().lower()
+        # Always set the password: registration has no email verification, so a promoted
+        # account could otherwise be controlled by whoever pre-registered the address.
+        password = click.prompt("Password", hide_input=True, confirmation_prompt=True)
+        if len(password) < 8:
+            raise click.ClickException("Password must be at least 8 characters.")
+        user = User.query.filter_by(email=email).first()
+        if user is None:
+            user = User(name=name.strip(), email=email)
+            db.session.add(user)
+            action = "created"
+        else:
+            action = "promoted"
+        user.role = "admin"
+        user.set_password(password)
+        db.session.commit()
+        click.echo(f"Admin {email} {action}.")
