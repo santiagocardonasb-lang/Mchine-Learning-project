@@ -5,7 +5,7 @@ import pytest
 import config
 
 from app import create_app
-from config import normalize_db_url
+from config import get_config, normalize_db_url
 
 
 def test_normalize_postgres_scheme():
@@ -60,3 +60,22 @@ def test_empty_env_vars_fall_back_to_defaults(monkeypatch):
 
 def test_home_responds(client, db_session):
     assert client.get("/").status_code == 200
+
+
+def test_production_cookies_are_secure():
+    prod = get_config("production")
+    assert prod.SESSION_COOKIE_SECURE is True
+    assert prod.REMEMBER_COOKIE_SECURE is True
+    assert prod.SESSION_COOKIE_SAMESITE == "Lax"
+    assert prod.REMEMBER_COOKIE_SAMESITE == "Lax"
+
+
+def test_render_requires_production_config(monkeypatch):
+    monkeypatch.setenv("RENDER", "true")
+    monkeypatch.setattr("app.load_dotenv", lambda *a, **k: None)
+    with pytest.raises(RuntimeError, match="FLASK_ENV=production"):
+        create_app("development")
+
+
+def test_csrf_tokens_do_not_expire():
+    assert config.Config.WTF_CSRF_TIME_LIMIT is None

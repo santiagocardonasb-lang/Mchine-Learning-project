@@ -18,6 +18,8 @@ class Config:
         os.environ.get("DATABASE_URL") or f"sqlite:///{INSTANCE_DIR / 'locwaste.db'}"
     )
     SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True}
+    # A CSRF token that outlives the 1h default would break forms left open in a tab.
+    WTF_CSRF_TIME_LIMIT = None
 
 
 class DevConfig(Config):
@@ -31,7 +33,10 @@ class TestConfig(Config):
 
 
 class ProdConfig(Config):
-    pass
+    SESSION_COOKIE_SECURE = True
+    REMEMBER_COOKIE_SECURE = True
+    SESSION_COOKIE_SAMESITE = "Lax"
+    REMEMBER_COOKIE_SAMESITE = "Lax"
 
 
 _CONFIGS = {

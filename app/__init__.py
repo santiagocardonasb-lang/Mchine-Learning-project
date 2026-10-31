@@ -1,7 +1,9 @@
 import os
+from urllib.parse import urlsplit
 
 from dotenv import load_dotenv
-from flask import Flask
+from flask import Flask, flash, redirect, request, url_for
+from flask_wtf.csrf import CSRFError
 
 from app.extensions import csrf, db, login_manager, migrate
 
@@ -16,6 +18,9 @@ def create_app(config_name: str | None = None) -> Flask:
         for name in ("DATABASE_URL", "SECRET_KEY"):
             if not os.environ.get(name):
                 raise RuntimeError(f"{name} must be set in production.")
+
+    if os.environ.get("RENDER") and config_name != "production":
+        raise RuntimeError("Set FLASK_ENV=production on Render.")
 
     INSTANCE_DIR.mkdir(exist_ok=True)
     app = Flask(__name__)
@@ -47,4 +52,13 @@ def create_app(config_name: str | None = None) -> Flask:
     app.register_blueprint(map_bp)
     app.register_blueprint(reports_bp)
     register_commands(app)
+
+    @app.errorhandler(CSRFError)
+    def csrf_expired(error: CSRFError):
+        flash("Your session expired. Please try again.", "error")
+        referrer = request.referrer
+        if referrer and urlsplit(referrer).netloc == request.host:
+            return redirect(referrer)
+        return redirect(url_for("main.home"))
+
     return app
