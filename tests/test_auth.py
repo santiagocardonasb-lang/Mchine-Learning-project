@@ -22,6 +22,12 @@ def register_via_form(client, email="ana@mail.com", password="secret123", confir
     )
 
 
+def register_via_form_at(client, url):
+    return client.post(
+        url, data={"name": "Ana", "email": "ana@mail.com", "password": "secret123", "confirm": "secret123"}
+    )
+
+
 def login_via_form(client, email="ana@mail.com", password="secret123", **extra):
     return client.post("/auth/login", data={"email": email, "password": password, **extra})
 
@@ -214,3 +220,43 @@ def test_create_admin_rejects_short_password(app, db_session):
     )
     assert result.exit_code != 0
     assert User.query.count() == 0
+
+
+def test_register_carries_next_through_to_login(client, db_session):
+    html = client.get("/auth/register?next=/reports/new").get_data(as_text=True)
+    assert "/auth/login?next=/reports/new" in html
+
+    response = register_via_form_at(client, "/auth/register?next=/reports/new")
+
+    assert response.status_code == 302
+    assert response.headers["Location"] == "/auth/login?next=/reports/new"
+
+
+def test_login_page_links_to_register_with_next(client, db_session):
+    html = client.get("/auth/login?next=/reports/new").get_data(as_text=True)
+    assert "/auth/register?next=/reports/new" in html
+
+
+def test_register_drops_unsafe_next(client, db_session):
+    response = register_via_form_at(client, "/auth/register?next=//evil.example/")
+
+    assert response.headers["Location"] == "/auth/login"
+
+
+def test_csrf_failure_flashes_and_redirects_instead_of_400(app, client):
+    app.config["WTF_CSRF_ENABLED"] = True
+
+    response = client.post("/auth/logout")
+
+    assert response.status_code == 302
+    assert response.headers["Location"] == "/"
+    with client.session_transaction() as sess:
+        assert ("error", "Your session expired. Please try again.") in sess["_flashes"]
+
+
+def test_csrf_failure_ignores_off_site_referrer(app, client):
+    app.config["WTF_CSRF_ENABLED"] = True
+
+    response = client.post("/auth/logout", headers={"Referer": "https://evil.example/x"})
+
+    assert response.headers["Location"] == "/"

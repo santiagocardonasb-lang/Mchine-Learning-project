@@ -19,7 +19,7 @@
       {% endfor %}
       <button class="btn btn-brand" type="submit">Create account</button>
     </form>
-    <p class="note switch-link">Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a></p>
+    <p class="note switch-link">Already have an account? <a href="{{ url_for('auth.login', next=next_target) }}">Sign in</a></p>
   </div>
 </div>
 {% endblock %}
