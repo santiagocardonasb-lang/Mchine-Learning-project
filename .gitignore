@@ -12,3 +12,8 @@ __pycache__/
 # Local working guides
 GUIA_*.md
 PLAN_PROYECTO.md
+
+# Local runtime and secrets
+instance/
+.env
+.superpowers/
