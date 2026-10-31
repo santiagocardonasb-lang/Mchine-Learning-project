@@ -1,0 +1,15 @@
+:root {
+  --canvas: #f5f6f2; --surface: #ffffff; --subtle: #eef0ea; --line: #e2e5dc;
+  --fg: #1f2a26; --fg-muted: #5b6660; --fg-faint: #8a948e;
+  --brand: #2f6b5a; --brand-soft: #e3efe9; --on-brand: #ffffff;
+  --low: #5f9e7c; --low-soft: #e6f2ea; --medium: #d39a4f; --medium-soft: #fbf0e0; --high: #d9706a; --high-soft: #fbe8e5;
+  --shadow: 31 42 38; --map-line: #7c8781;
+}
+
+html.dark {
+  --canvas: #141816; --surface: #1b201e; --subtle: #232a27; --line: #2e3632;
+  --fg: #eef2ef; --fg-muted: #a9b3ad; --fg-faint: #7f8984;
+  --brand: #7cc2a9; --brand-soft: #1f3a31; --on-brand: #0f1513;
+  --low: #7cc2a0; --low-soft: #1d3329; --medium: #e6b46f; --medium-soft: #3a2d1a; --high: #ec8f88; --high-soft: #3d2321;
+  --shadow: 0 0 0; --map-line: #9aa49f;
+}
