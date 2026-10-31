@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Create account</title>
+</head>
+<body>
+  <h1>Create account</h1>
+  {% for category, message in get_flashed_messages(with_categories=true) %}
+    <p class="flash {{ category }}">{{ message }}</p>
+  {% endfor %}
+  <form method="post">
+    {{ form.hidden_tag() }}
+    <p>{{ form.name.label }} {{ form.name() }}</p>
+    <p>{{ form.email.label }} {{ form.email() }}</p>
+    <p>{{ form.password.label }} {{ form.password() }}</p>
+    <p>{{ form.confirm.label }} {{ form.confirm() }}</p>
+    {% for field in form if field.errors %}
+      {% for error in field.errors %}<p class="error">{{ error }}</p>{% endfor %}
+    {% endfor %}
+    <button type="submit">Create account</button>
+  </form>
+  <p><a href="{{ url_for('auth.login') }}">Already have an account?</a></p>
+</body>
+</html>
