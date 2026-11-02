@@ -45,6 +45,8 @@ def create_app(config_name: str | None = None) -> Flask:
     from app.blueprints.map import map_bp
     from app.blueprints.reports import reports_bp
     from app.commands import register_commands
+    from app.ml_commands import register_ml_commands
+    from app.services import report_service, training_service
 
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp)
@@ -52,6 +54,9 @@ def create_app(config_name: str | None = None) -> Flask:
     app.register_blueprint(map_bp)
     app.register_blueprint(reports_bp)
     register_commands(app)
+    register_ml_commands(app)
+    if training_service.maybe_retrain not in report_service.on_created:
+         report_service.on_created.append(training_service.maybe_retrain)
 
     @app.errorhandler(CSRFError)
     def csrf_expired(error: CSRFError):
