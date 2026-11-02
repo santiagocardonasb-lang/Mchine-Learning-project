@@ -1,0 +1,48 @@
+/* Model and CRISP-DM pages (Part 2). Uses the tokens from tokens.css. */
+.head-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.head-actions form { margin: 0; }
+.head-actions .btn:disabled { opacity: .6; cursor: progress; }
+.model-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding-bottom: 48px; }
+.model-grid .card { padding: 22px; min-width: 0; }
+.model-grid .wide { grid-column: 1 / -1; }
+.model-grid h3 { margin: 0 0 14px; font-size: 16px; letter-spacing: -.02em; }
+.model-grid .note + .note { margin-top: 8px; }
+.model-grid table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.model-grid th, .model-grid td { text-align: left; padding: 10px 6px; border-bottom: 1px solid var(--line); }
+.model-grid th { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--fg-faint); }
+.model-grid tr.best td { font-weight: 700; }
+.model-grid .wide { overflow-x: auto; }
+.hint-text { margin: 12px 0 0; color: var(--fg-faint); font-size: 13px; }
+.params { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.param { padding: 11px 13px; border-radius: 12px; background: var(--subtle); overflow-wrap: anywhere; }
+.param code { display: block; font-size: 11px; color: var(--fg-faint); }
+.all-params { margin-top: 12px; }
+.all-params summary { cursor: pointer; color: var(--brand); font-weight: 700; font-size: 14px; margin-bottom: 10px; }
+.cm { display: grid; grid-template-columns: 70px repeat(3, 1fr); gap: 5px; text-align: center; font-weight: 700; }
+.cm div { padding: 13px 0; border-radius: 8px; background: var(--subtle); }
+.cm .h { background: none; color: var(--fg-faint); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+.cm .low { background: var(--low-soft); color: var(--low-ink); }
+.cm .medium { background: var(--medium-soft); color: var(--medium-ink); }
+.cm .high { background: var(--high-soft); color: var(--high-ink); }
+.bars .bar { display: grid; grid-template-columns: 170px 1fr 40px; align-items: center; gap: 10px; margin-bottom: 10px; font-weight: 600; font-size: 14px; }
+.bars .track { height: 8px; background: var(--subtle); border-radius: 4px; }
+.bars .fill { height: 100%; background: var(--brand); border-radius: 4px; opacity: .85; }
+.balance { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+.phases { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-bottom: 18px; }
+.phase { padding: 22px; display: flex; flex-direction: column; gap: 12px; }
+.phase-head { display: flex; gap: 12px; align-items: center; }
+.phase-head h3 { margin: 0; font-size: 16px; letter-spacing: -.02em; }
+.phase-num { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--brand-soft); color: var(--brand); font-size: 18px; flex-shrink: 0; }
+.assumptions { margin: 0; padding-left: 20px; color: var(--fg-muted); line-height: 1.65; display: flex; flex-direction: column; gap: 6px; }
+.link { color: var(--brand); font-weight: 700; }
+
+@media (max-width: 900px) {
+  .model-grid { grid-template-columns: 1fr; }
+  .phases { grid-template-columns: 1fr 1fr; }
+  .bars .bar { grid-template-columns: 130px 1fr 36px; }
+}
+
+@media (max-width: 560px) {
+  .phases, .params { grid-template-columns: 1fr; }
+}

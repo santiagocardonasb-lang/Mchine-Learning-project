@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}CRISP-DM · LocWaste{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/model.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="page">
+  <h1>CRISP-DM in LocWaste</h1>
+  <p class="sub">The six phases of the methodology, applied to predicting waste accumulation risk by UPZ.</p>
+
+  <div class="phases">
+    {% for phase in content.PHASES %}
+      <div class="card phase">
+        <div class="phase-head">
+          <span class="phase-num"><i class="bi bi-{{ phase.icon }}"></i></span>
+          <div><span class="label">Phase {{ phase.number }}</span><h3>{{ phase.name }}</h3></div>
+        </div>
+        <p class="note">{{ phase.text }}</p>
+        {% if phase.number == 5 and run %}
+          <p class="note"><b>Current run:</b> {{ run.metrics.model_names[run.metrics.chosen_model] }},
+            test macro F1 {{ "%.2f"|format(run.metrics.test.macro_f1) }} vs.
+            {{ "%.2f"|format(run.metrics.baseline_test.macro_f1) }} for the baseline.
+            <a class="link" href="{{ url_for('model.index') }}">See all metrics</a></p>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="card prose">
+    <h2>Target and leakage</h2>
+    <p class="note">{{ content.TARGET }}</p>
+  </div>
+
+  <div class="card prose">
+    <h2>Synthetic history</h2>
+    <p class="note">The model needs history from day one, so the first 24 months are synthetic,
+      calibrated on the real open data. Every synthetic report is stored with <code>source = synthetic</code>.</p>
+    <ul class="assumptions">
+      {% for item in content.SYNTHETIC_ASSUMPTIONS %}<li>{{ item }}</li>{% endfor %}
+    </ul>
+    <p class="note">{{ content.POPULATION_SOURCE }}</p>
+  </div>
+
+  <p class="more"><a class="btn btn-ghost" href="{{ url_for('main.how_it_works') }}">Data sources <i class="bi bi-arrow-right"></i></a></p>
+</div>
+{% endblock %}
