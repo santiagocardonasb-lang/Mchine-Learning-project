@@ -5,6 +5,11 @@ SQLAlchemy==2.1.6
 alembic==1.20.1
 WTForms==3.3.1
 numpy==2.5.4
+scipy==1.18.1
+threadpoolctl==3.7.0
+python-dateutil==3.0.0
+six==1.17.0
+tzdata==2026.6
 Flask-SQLAlchemy==3.1.1
 Flask-Migrate==4.1.0
 Flask-Login==0.6.3
@@ -14,4 +19,7 @@ psycopg[binary]==3.3.6
 shapely==2.2.0
 python-dotenv==1.2.4
 gunicorn==26.2.0
+pandas==3.1.0
+scikit-learn==1.9.1
+joblib==1.6.0
 pytest==9.2.0
