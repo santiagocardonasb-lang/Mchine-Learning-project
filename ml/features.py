@@ -1,177 +1,97 @@
-"""Build the UPZ-month panel and next-month risk target."""
+"""Reports → one row per UPZ × month with lag features and the next month's risk target."""
 
 import numpy as np
 import pandas as pd
 
 from ml import config
 
+REPORT_COLUMNS = ["upz_code", "reported_at", "updated_at", "size", "has_rodents",
+                  "has_insects", "has_odor", "near_water", "status"]
 
-def zone_table(upzs: pd.DataFrame, localities: pd.DataFrame) -> pd.DataFrame:
-    """Combine UPZ and locality information, allocating population by area."""
-    zones = upzs.copy()
-    localities = localities.copy()
 
-    zones["upz_code"] = zones["upz_code"].astype(str)
-    zones["locality_code"] = zones["locality_code"].astype(str)
-    localities["code"] = localities["code"].astype(str)
+class NotEnoughData(Exception):
+    """Too few months of reports to build features and validate over time."""
 
-    zones = zones.merge(
-        localities[["code", "population"]],
-        left_on="locality_code",
-        right_on="code",
-        how="left",
+
+def zone_table(zones: pd.DataFrame, localities: pd.DataFrame) -> pd.DataFrame:
+    """Static attributes per UPZ.
+
+    zones: upz_code, locality_code, area_km2, critical_points, public_space_m2_per_inhabitant.
+    localities: code, population.
+    UPZ population is not published, so each locality's population is split by UPZ area.
+    """
+    z = zones.copy()
+    z["upz_code"] = z["upz_code"].astype(str)
+    z["locality_code"] = z["locality_code"].astype(str)
+    pop = localities.assign(code=localities["code"].astype(str)).set_index("code")["population"]
+    locality_area = z.groupby("locality_code")["area_km2"].transform("sum")
+    z["population"] = z["locality_code"].map(pop) * z["area_km2"] / locality_area
+    z["population_density"] = z["locality_code"].map(pop) / locality_area
+    z["public_space_m2_per_inhabitant"] = z["public_space_m2_per_inhabitant"].fillna(
+        z["public_space_m2_per_inhabitant"].median()
     )
+    return z[["upz_code", "locality_code", "area_km2", "critical_points",
+              "public_space_m2_per_inhabitant", "population", "population_density"]]
 
-    total_area = zones.groupby("locality_code")["area_km2"].transform("sum")
-    zones["population"] = (
-        zones["population"] * zones["area_km2"] / total_area
-    ).round().astype(int)
 
-    zones["public_space_m2_per_inhabitant"] = (
-        zones["public_space_m2_per_inhabitant"].fillna(
-            zones["public_space_m2_per_inhabitant"].median()
-        )
-    )
-
-    return zones.drop(columns=["code"])
+def _local(series: pd.Series) -> pd.Series:
+    """Timestamps as naive Bogotá time, so a report at 11 pm on the 31st stays in its month."""
+    return pd.to_datetime(series, utc=True).dt.tz_convert(config.TIMEZONE).dt.tz_localize(None)
 
 
 def build_panel(reports: pd.DataFrame, zones: pd.DataFrame) -> pd.DataFrame:
-    """Build one row per UPZ and month, using only information available then."""
-    data = reports.copy()
+    """One row per UPZ and month, from the first to the last month with reports.
 
-    if data.empty:
-        return pd.DataFrame()
+    Every feature of month t uses reports up to the end of month t only. `next_rate` is the
+    following month's reports per 10,000 inhabitants (NaN for the last month, which is the one
+    we predict from).
+    """
+    r = reports[reports["status"] != "rejected"].copy()
+    if r.empty:
+        raise NotEnoughData(f"There are no reports yet; training needs {config.MIN_MONTHS} months of them.")
+    r["upz_code"] = r["upz_code"].astype(str)
+    r["month"] = _local(r["reported_at"]).dt.to_period("M").dt.to_timestamp()
+    month_end = r["month"] + pd.offsets.MonthBegin(1)
+    updated = _local(r["updated_at"])
+    # Closing is a report's last change, so a closed report closed after month end was still open then.
+    r["open_at_end"] = (r["status"] != "closed") | (updated >= month_end)
+    r["large"] = r["size"] == "large"
+    r["vectors"] = r["has_rodents"] | r["has_insects"] | r["has_odor"]
 
-    data["upz_code"] = data["upz_code"].astype(str)
-    data["reported_at"] = pd.to_datetime(data["reported_at"], utc=True).dt.tz_convert(
-        config.TIMEZONE
-    )
-    data["updated_at"] = pd.to_datetime(data["updated_at"], utc=True).dt.tz_convert(
-        config.TIMEZONE
-    )
-
-    data = data[data["status"] != "rejected"].copy()
-
-    data["month"] = data["reported_at"].dt.tz_localize(None).dt.to_period("M").dt.to_timestamp()
-
-    start = data["month"].min()
-    end = data["month"].max()
-    months = pd.date_range(start, end, freq="MS")
-
-    upz_codes = zones["upz_code"].astype(str).unique()
-
-    panel = pd.MultiIndex.from_product(
-        [upz_codes, months], names=["upz_code", "month"]
-    ).to_frame(index=False)
-
-    data["large"] = data["size"].eq("large").astype(int)
-    data["vectors"] = (
-        data["has_rodents"] | data["has_insects"]
-    ).astype(int)
-    data["near_water_flag"] = data["near_water"].astype(int)
-
-    monthly = data.groupby(["upz_code", "month"]).agg(
-        reports=("upz_code", "size"),
-        large=("large", "sum"),
-        vectors=("vectors", "sum"),
-        near_water=("near_water_flag", "sum"),
-    ).reset_index()
-
-    panel = panel.merge(monthly, on=["upz_code", "month"], how="left")
-
-    count_columns = ["reports", "large", "vectors", "near_water"]
-    panel[count_columns] = panel[count_columns].fillna(0)
-
-    panel = panel.merge(zones, on="upz_code", how="left")
-
-    panel["rate"] = (
-        panel["reports"] / panel["population"] * config.RATE_PER_INHABITANTS
+    monthly = r.groupby(["upz_code", "month"]).agg(
+        reports=("size", "size"),
+        share_large=("large", "mean"),
+        share_vectors=("vectors", "mean"),
+        share_near_water=("near_water", "mean"),
+        open_at_month_end=("open_at_end", "sum"),
     )
 
-    for column in ["large", "vectors", "near_water"]:
-        panel[f"share_{column}"] = np.where(
-            panel["reports"] > 0,
-            panel[column] / panel["reports"],
-            0,
-        )
-
-    panel["month_of_year"] = panel["month"].dt.month
-
+    months = pd.date_range(r["month"].min(), r["month"].max(), freq="MS")
+    grid = pd.MultiIndex.from_product([zones["upz_code"], months], names=["upz_code", "month"])
+    panel = monthly.reindex(grid).fillna(0).reset_index()
     panel = panel.sort_values(["upz_code", "month"]).reset_index(drop=True)
 
-    grouped = panel.groupby("upz_code", group_keys=False)
-
-    panel["lag_1"] = grouped["reports"].shift(1)
-    panel["lag_2"] = grouped["reports"].shift(2)
-    panel["lag_3"] = grouped["reports"].shift(3)
-
-    panel["rolling_mean_3"] = grouped["reports"].transform(
-        lambda values: values.shift(1).rolling(3, min_periods=1).mean()
-    )
-
+    by_zone = panel.groupby("upz_code")["reports"]
+    for k in (1, 2, 3):
+        panel[f"lag_{k}"] = by_zone.shift(k).fillna(0)
+    panel["rolling_mean_3"] = by_zone.transform(lambda s: s.rolling(3, min_periods=1).mean())
     panel["change_1"] = panel["reports"] - panel["lag_1"]
+    panel["month_of_year"] = panel["month"].dt.month
 
-    panel[["lag_1", "lag_2", "lag_3"]] = panel[
-        ["lag_1", "lag_2", "lag_3"]
-    ].fillna(0)
-
-    panel["rolling_mean_3"] = panel["rolling_mean_3"].fillna(0)
-    panel["change_1"] = panel["change_1"].fillna(0)
-
-    report_months = data.groupby(["upz_code", "month"]).size().rename("count")
-    report_months = report_months.reset_index()
-
-    closed = data.assign(
-        closed_on_time=(
-            (data["status"] == "closed")
-            & (data["updated_at"].dt.tz_localize(None) < (
-                data["month"] + pd.offsets.MonthBegin(1)
-            ))
-        ).astype(int)
-    )
-
-    closed_monthly = closed.groupby(["upz_code", "month"])[
-        "closed_on_time"
-    ].sum().reset_index()
-
-    panel = panel.merge(
-        closed_monthly, on=["upz_code", "month"], how="left"
-    )
-
-    panel["open_at_month_end"] = (
-        panel["reports"] - panel["closed_on_time"].fillna(0)
-    ).clip(lower=0)
-
-    panel["critical_points"] = panel["critical_points"].fillna(0)
-
-    panel["next_rate"] = grouped["rate"].shift(-1)
-
-    return panel.drop(
-        columns=["large", "vectors", "near_water", "closed_on_time"],
-        errors="ignore",
-    )
+    panel = panel.merge(zones, on="upz_code", how="left")
+    panel["rate"] = panel["reports"] / panel["population"] * config.RATE_PER_INHABITANTS
+    next_reports = panel.groupby("upz_code")["reports"].shift(-1)
+    panel["next_rate"] = next_reports / panel["population"] * config.RATE_PER_INHABITANTS
+    return panel
 
 
 def tercile_cuts(rates: pd.Series) -> tuple[float, float]:
-    """Calculate the lower and upper tercile thresholds."""
-    clean = rates.dropna()
-
-    return (
-        float(clean.quantile(1 / 3)),
-        float(clean.quantile(2 / 3)),
-    )
+    low, high = np.quantile(rates, [1 / 3, 2 / 3])
+    return float(low), float(high)
 
 
 def label(rates: pd.Series, cuts: tuple[float, float]) -> pd.Series:
-    """Assign low, medium, or high risk using the supplied thresholds."""
-    lower, upper = cuts
-
-    return pd.Series(
-        np.select(
-            [rates <= lower, rates <= upper],
-            ["low", "medium"],
-            default="high",
-        ),
-        index=rates.index,
-    )
+    """low below the first cut, high above the second, medium in between."""
+    low, high = cuts
+    levels = np.where(rates <= low, "low", np.where(rates <= high, "medium", "high"))
+    return pd.Series(levels, index=rates.index)
