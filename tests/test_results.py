@@ -33,9 +33,17 @@ def login(client, email):
 
 
 def add_report(user, point=KENNEDY, **fields):
-    report = report_service.create(user, *point, fields.pop("waste_type", "household"),
-                                   fields.pop("size", "medium"), fields.pop("has_rodents", False),
-                                   False, False, False, None)
+    report = report_service.create(
+        user,
+        *point,
+        fields.pop("waste_type", "household"),
+        fields.pop("size", "medium"),
+        fields.pop("has_rodents", False),
+        False,
+        False,
+        False,
+        None,
+    )
     for name, value in fields.items():
         setattr(report, name, value)
     db.session.commit()
@@ -45,10 +53,19 @@ def add_report(user, point=KENNEDY, **fields):
 def activate_prediction(upz_code, level="high", probability=0.8):
     run = ModelRun(trigger="cli", n_rows=1, params={}, metrics={}, is_active=True)
     upz = Upz.query.filter_by(code=upz_code).one()
-    db.session.add(RiskPrediction(model_run=run, upz=upz, period=datetime(2026, 11, 1).date(),
-                                  level=level, probability=probability))
+    db.session.add(
+        RiskPrediction(
+            model_run=run,
+            upz=upz,
+            period=datetime(2026, 11, 1).date(),
+            level=level,
+            probability=probability,
+        )
+    )
     db.session.commit()
-    # API
+
+
+# API
 
 def test_risk_without_model_has_stats_but_no_levels(client, ana):
     add_report(ana, has_rodents=True)
@@ -94,7 +111,9 @@ def test_heatmap_filters_by_locality_and_weights_size(client, ana):
     kennedy_code = Report.query.first().locality.code
 
     everything = client.get("/api/heatmap?months=1").get_json()["points"]
-    kennedy = client.get(f"/api/heatmap?months=1&locality={kennedy_code}").get_json()["points"]
+    kennedy = client.get(
+        f"/api/heatmap?months=1&locality={kennedy_code}"
+    ).get_json()["points"]
 
     assert len(everything) == 2
     assert kennedy == [[4.628, -74.163, 1.0]]
@@ -111,8 +130,12 @@ def test_public_api_hides_reporters(client, ana):
 
     for url in ("/api/risk?months=3", "/api/heatmap?months=3"):
         body = client.get(url).get_data(as_text=True)
-        assert "user_id" not in body and "ana@mail.com" not in body and "Ana" not in body
-        # Pages
+        assert "user_id" not in body
+        assert "ana@mail.com" not in body
+        assert "Ana" not in body
+
+
+# Pages
 
 def test_map_page_has_results_controls(client, db_session):
     html = client.get("/map").get_data(as_text=True)
@@ -120,7 +143,9 @@ def test_map_page_has_results_controls(client, db_session):
     assert 'id="zoneSearch"' in html
     assert 'data-months="12"' in html
     assert "map_results.js" in html
-    # My reports
+
+
+# My reports
 
 def test_my_reports_lists_only_own_reports(client, ana):
     other = auth_service.register("Luis", "luis@mail.com", "secret123")
@@ -138,7 +163,9 @@ def test_my_reports_lists_only_own_reports(client, ana):
 def test_my_reports_requires_login(client, db_session):
     response = client.get("/reports/mine")
     assert response.status_code == 302
-    # Admin
+
+
+# Admin
 
 def test_admin_guard(client, ana):
     assert client.get("/admin").status_code == 302
@@ -151,7 +178,10 @@ def test_admin_changes_report_status(client, ana, admin):
     login(client, "admin@mail.com")
 
     assert "Report queue" in client.get("/admin").get_data(as_text=True)
-    response = client.post(f"/admin/reports/{report.id}/status", data={"status": "rejected"})
+    response = client.post(
+        f"/admin/reports/{report.id}/status",
+        data={"status": "rejected"},
+    )
 
     assert response.status_code == 302
     assert db.session.get(Report, report.id).status == "rejected"
@@ -162,7 +192,10 @@ def test_admin_rejects_unknown_status(client, ana, admin):
     report = add_report(ana)
     login(client, "admin@mail.com")
 
-    client.post(f"/admin/reports/{report.id}/status", data={"status": "deleted"})
+    client.post(
+        f"/admin/reports/{report.id}/status",
+        data={"status": "deleted"},
+    )
 
     assert db.session.get(Report, report.id).status == "open"
 
@@ -171,7 +204,12 @@ def test_citizen_cannot_change_status(client, ana):
     report = add_report(ana)
     login(client, "ana@mail.com")
 
-    assert client.post(f"/admin/reports/{report.id}/status", data={"status": "closed"}).status_code == 403
+    response = client.post(
+        f"/admin/reports/{report.id}/status",
+        data={"status": "closed"},
+    )
+
+    assert response.status_code == 403
     assert db.session.get(Report, report.id).status == "open"
 
 
@@ -193,3 +231,28 @@ def test_admin_queue_filters_by_status(client, ana, admin):
     html = client.get("/admin?status=closed").get_data(as_text=True)
 
     assert "bulky" in html and "organic" not in html
+
+
+# City stats
+
+def test_home_shows_city_stats(client, ana):
+    add_report(ana)
+    report = Report.query.one()
+    activate_prediction(report.upz.code)
+
+    html = client.get("/").get_data(as_text=True)
+
+    assert "Reports in the last 12 months" in html
+    assert "UPZ at high risk in November" in html
+
+
+def test_nav_shows_my_reports_and_admin_by_role(client, ana, admin):
+    assert "My reports" not in client.get("/").get_data(as_text=True)
+
+    login(client, "ana@mail.com")
+    html = client.get("/").get_data(as_text=True)
+    assert "My reports" in html and 'href="/admin"' not in html
+
+    client.post("/auth/logout")
+    login(client, "admin@mail.com")
+    assert 'href="/admin"' in client.get("/").get_data(as_text=True)

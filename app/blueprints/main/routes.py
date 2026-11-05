@@ -1,8 +1,9 @@
+
 from flask import render_template
 
 from app import content
 from app.blueprints.main import main_bp
-from app.services import stats_service
+from app.services import risk_service, stats_service
 
 
 @main_bp.route("/")
@@ -11,6 +12,7 @@ def home():
         "main/home.html",
         reports_this_month=stats_service.reports_this_month(),
         priority_zones=stats_service.top_priority_zones(),
+        city=risk_service.city_stats(),
     )
 
 
