@@ -1,3 +1,4 @@
+```html
 {% extends "base.html" %}
 
 {% block title %}Risk map · LocWaste{% endblock %}
@@ -5,6 +6,7 @@
 {% block head %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/results.css') }}">
 {% endblock %}
 
 {# Flashes float over the map instead of pushing it below the fold. #}
@@ -16,20 +18,37 @@
   {% include "partials/flash.html" %}
 
   <div class="topbar">
-    <label class="card loc-filter">
-      <i class="bi bi-geo"></i>
+    <div class="card search">
+      <i class="bi bi-search"></i>
+      <input id="zoneSearch" type="search" placeholder="Search a neighborhood or UPZ" autocomplete="off"
+             aria-label="Search a neighborhood or UPZ" aria-controls="searchResults">
       <select id="locSelect" aria-label="Locality"><option value="">All localities</option></select>
-    </label>
+      <ul class="card search-results" id="searchResults" role="listbox" hidden></ul>
+    </div>
+    <div class="card chips" id="period" role="group" aria-label="Period">
+      <button type="button" data-months="1">Last month</button>
+      <button type="button" data-months="3" class="on">3 months</button>
+      <button type="button" data-months="12">12 months</button>
+    </div>
   </div>
 
   <aside class="card side">
     <div>
       <h2>Bogotá at a glance</h2>
-      <p>Citizen reports and next-month risk by UPZ</p>
+      <p id="riskPeriod">Citizen reports and next-month risk by UPZ</p>
     </div>
-    <div class="mini-stats">
-      <div><span class="label">Reports this month</span><b>{{ reports_this_month }}</b></div>
+
+    <div class="mini-stats two">
+      <div>
+        <span class="label" id="reportsLabel">Reports · 3 months</span>
+        <b id="statReports">–</b>
+      </div>
+      <div>
+        <span class="label">High-risk UPZ</span>
+        <b class="high-ink" id="statHigh">–</b>
+      </div>
     </div>
+
     <div>
       <span class="label">Top priority</span>
       {% if priority_zones %}
@@ -44,6 +63,13 @@
         <p class="side-empty"><i class="bi bi-hourglass-split"></i>Predictions appear after the first model run</p>
       {% endif %}
     </div>
+
+    <div class="layers">
+      <span class="label">Show on map</span>
+      <label class="toggle">Report hotspots <input type="checkbox" class="switch" data-layer="heat" checked></label>
+      <label class="toggle">Risk by zone <input type="checkbox" class="switch" data-layer="risk" checked></label>
+      <label class="toggle">Locality names <input type="checkbox" class="switch" data-layer="labels" checked></label>
+    </div>
   </aside>
 
   <div class="card detail" id="detail" aria-live="polite">
@@ -55,6 +81,16 @@
       </div>
       <button class="icon-btn" id="detailClose" type="button" aria-label="Close"><i class="bi bi-x-lg"></i></button>
     </div>
+
+    <div id="detailRisk"></div>
+
+    <div class="detail-stats">
+      <div><span class="label" id="detailReportsLabel">Reports</span><b id="detailReports">–</b></div>
+      <div><span class="label">Still open</span><b id="detailOpen">–</b></div>
+      <div><span class="label">Most common</span><b id="detailType">–</b></div>
+      <div><span class="label">With vectors</span><b id="detailVectors">–</b></div>
+    </div>
+
     <a class="btn btn-brand" id="detailReport" href="{{ url_for('reports.new') }}"><i class="bi bi-geo-alt-fill"></i>Report here</a>
   </div>
 
@@ -75,10 +111,12 @@
 (function () {
   const reportUrl = "{{ url_for('reports.new') }}";
   const detail = document.getElementById('detail');
+
   // The summary card covers the left 340px on wide screens, so fits leave room for it.
   const fitOptions = () => window.matchMedia('(min-width: 901px)').matches
     ? {paddingTopLeft: [340, 80], paddingBottomRight: [20, 20]}
     : {paddingTopLeft: [16, 80], paddingBottomRight: [16, 16]};
+
   const localityNames = {};
 
   const risk = initRiskMap(document.getElementById('map'), {
@@ -93,16 +131,25 @@
       detail.classList.add('open');
     },
   });
+
   window.locwasteMap = risk;
-  document.getElementById('detailClose').addEventListener('click', () => detail.classList.remove('open'));
+
+  document.getElementById('detailClose').addEventListener('click', () => {
+    detail.classList.remove('open');
+  });
 
   const select = document.getElementById('locSelect');
+
   risk.ready.then(({localities}) => {
-    const features = localities.features.slice().sort((a, b) => a.properties.name.localeCompare(b.properties.name, 'es'));
+    const features = localities.features.slice().sort(
+      (a, b) => a.properties.name.localeCompare(b.properties.name, 'es')
+    );
+
     features.forEach(f => {
       localityNames[f.properties.code] = f.properties.name;
       select.add(new Option(f.properties.name, f.properties.code));
     });
+
     select.addEventListener('change', () => {
       const feature = features.find(f => f.properties.code === select.value);
       const bounds = feature ? L.geoJSON(feature).getBounds() : risk.layers.upz.getBounds();
@@ -111,6 +158,17 @@
   });
 })();
 </script>
-{# Part 3 adds heat/risk layers here, using window.locwasteMap (the initRiskMap result). #}
-{% block map_layers %}{% endblock %}
+
+{% block map_layers %}
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script src="{{ url_for('static', filename='js/map_results.js') }}"></script>
+<script>
+  initMapResults(window.locwasteMap, {
+    riskUrl: "{{ url_for('api.risk') }}",
+    heatmapUrl: "{{ url_for('api.heatmap') }}",
+    neighborhoodsUrl: "{{ url_for('api.neighborhoods') }}",
+    neighborhoodShapesUrl: "{{ url_for('static', filename='geo/neighborhoods.geojson') }}",
+  });
+</script>
+{% endblock %}
 {% endblock %}

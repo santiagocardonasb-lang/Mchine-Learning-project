@@ -112,3 +112,11 @@ def test_public_api_hides_reporters(client, ana):
     for url in ("/api/risk?months=3", "/api/heatmap?months=3"):
         body = client.get(url).get_data(as_text=True)
         assert "user_id" not in body and "ana@mail.com" not in body and "Ana" not in body
+        # Pages
+
+def test_map_page_has_results_controls(client, db_session):
+    html = client.get("/map").get_data(as_text=True)
+
+    assert 'id="zoneSearch"' in html
+    assert 'data-months="12"' in html
+    assert "map_results.js" in html
