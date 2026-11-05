@@ -120,3 +120,21 @@ def test_map_page_has_results_controls(client, db_session):
     assert 'id="zoneSearch"' in html
     assert 'data-months="12"' in html
     assert "map_results.js" in html
+    # My reports
+
+def test_my_reports_lists_only_own_reports(client, ana):
+    other = auth_service.register("Luis", "luis@mail.com", "secret123")
+    add_report(ana, KENNEDY, waste_type="bulky")
+    add_report(other, CANDELARIA)
+    login(client, "ana@mail.com")
+
+    html = client.get("/reports/mine").get_data(as_text=True)
+
+    assert "Bulky" in html
+    assert "Candelaria" not in html
+    assert report_service.list_for_user(ana)[0].user_id == ana.id
+
+
+def test_my_reports_requires_login(client, db_session):
+    response = client.get("/reports/mine")
+    assert response.status_code == 302

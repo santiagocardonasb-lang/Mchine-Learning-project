@@ -67,6 +67,8 @@ def create(
             current_app.logger.exception("on_created hook %r failed for report %s", hook, report_id)
     return report
 
+def list_for_user(user: User) -> list[Report]:
+    return Report.query.filter_by(user_id=user.id).order_by(Report.reported_at.desc()).all()
 
 def public_dict(report: Report) -> dict:
     return {

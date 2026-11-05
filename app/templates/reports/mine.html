@@ -1,0 +1,39 @@
+```html
+{% extends "base.html" %}
+
+{% block title %}My reports · LocWaste{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/results.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="page">
+  <div class="section-head">
+    <div>
+      <h1>My reports</h1>
+      <p class="sub">Every point you reported and what has happened to it.</p>
+    </div>
+    <a class="btn btn-brand" href="{{ url_for('reports.new') }}"><i class="bi bi-geo-alt-fill"></i>Report waste</a>
+  </div>
+
+  {% if reports %}
+    <div class="my-reports">
+      {% for r in reports %}
+        <div class="card my-report">
+          <div class="my-report-head">
+            <span class="status {{ r.status }}">{{ r.status | replace("_", " ") }}</span>
+            <small>{{ r.reported_at.strftime("%b %d, %Y") }}</small>
+          </div>
+          <div class="name">{{ r.upz.name if r.upz }}</div>
+          <small>{{ r.locality.name if r.locality }}{{ " · " ~ r.neighborhood if r.neighborhood }}</small>
+          <p class="note">{{ r.waste_type | replace("_", " ") | capitalize }}, {{ size_labels[r.size] }}{{ " — " ~ r.description if r.description }}</p>
+          <a class="link" href="{{ url_for('map.index') }}?lat={{ r.latitude }}&lon={{ r.longitude }}">See on the map <i class="bi bi-arrow-right"></i></a>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="card empty"><i class="bi bi-geo"></i>You haven't reported any point yet.</div>
+  {% endif %}
+</div>
+{% endblock %}

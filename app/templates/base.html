@@ -1,3 +1,4 @@
+```html
 <!doctype html>
 <html lang="en">
 <head>
@@ -23,6 +24,9 @@
   <a href="{{ url_for('map.index') }}" class="{{ 'active' if request.endpoint == 'map.index' }}">Risk map</a>
   <a href="{{ url_for('model.index') }}" class="{{ 'active' if request.endpoint in ('model.index', 'model.crisp_dm') }}">Model</a>
   <a href="{{ url_for('main.how_it_works') }}" class="{{ 'active' if request.endpoint == 'main.how_it_works' }}">How it works</a>
+  {% if current_user.is_authenticated %}
+  <a href="{{ url_for('reports.mine') }}" class="{{ 'active' if request.endpoint == 'reports.mine' }}">My reports</a>
+  {% endif %}
   {% endblock %}
   {% endset %}
   {% include "partials/nav.html" %}
