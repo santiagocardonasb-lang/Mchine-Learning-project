@@ -38,7 +38,8 @@ def create_app(config_name: str | None = None) -> Flask:
 
         return db.session.get(User, int(user_id))
 
-    from app import models  # noqa: F401  (registers tables so Flask-Migrate sees them)
+    from app import models  # noqa: F401
+    from app.blueprints.admin import admin_bp
     from app.blueprints.api import api_bp
     from app.blueprints.auth import auth_bp
     from app.blueprints.main import main_bp
@@ -55,10 +56,13 @@ def create_app(config_name: str | None = None) -> Flask:
     app.register_blueprint(map_bp)
     app.register_blueprint(reports_bp)
     app.register_blueprint(model_bp)
+    app.register_blueprint(admin_bp)
+
     register_commands(app)
     register_ml_commands(app)
+
     if training_service.maybe_retrain not in report_service.on_created:
-         report_service.on_created.append(training_service.maybe_retrain)
+        report_service.on_created.append(training_service.maybe_retrain)
 
     @app.errorhandler(CSRFError)
     def csrf_expired(error: CSRFError):

@@ -138,3 +138,58 @@ def test_my_reports_lists_only_own_reports(client, ana):
 def test_my_reports_requires_login(client, db_session):
     response = client.get("/reports/mine")
     assert response.status_code == 302
+    # Admin
+
+def test_admin_guard(client, ana):
+    assert client.get("/admin").status_code == 302
+    login(client, "ana@mail.com")
+    assert client.get("/admin").status_code == 403
+
+
+def test_admin_changes_report_status(client, ana, admin):
+    report = add_report(ana)
+    login(client, "admin@mail.com")
+
+    assert "Report queue" in client.get("/admin").get_data(as_text=True)
+    response = client.post(f"/admin/reports/{report.id}/status", data={"status": "rejected"})
+
+    assert response.status_code == 302
+    assert db.session.get(Report, report.id).status == "rejected"
+    assert client.get("/api/risk").get_json()["totals"]["reports"] == 0
+
+
+def test_admin_rejects_unknown_status(client, ana, admin):
+    report = add_report(ana)
+    login(client, "admin@mail.com")
+
+    client.post(f"/admin/reports/{report.id}/status", data={"status": "deleted"})
+
+    assert db.session.get(Report, report.id).status == "open"
+
+
+def test_citizen_cannot_change_status(client, ana):
+    report = add_report(ana)
+    login(client, "ana@mail.com")
+
+    assert client.post(f"/admin/reports/{report.id}/status", data={"status": "closed"}).status_code == 403
+    assert db.session.get(Report, report.id).status == "open"
+
+
+def test_admin_promotes_user_but_not_self(client, ana, admin):
+    login(client, "admin@mail.com")
+
+    client.post(f"/admin/users/{ana.id}/role", data={"role": "admin"})
+    client.post(f"/admin/users/{admin.id}/role", data={"role": "citizen"})
+
+    assert db.session.get(User, ana.id).role == "admin"
+    assert db.session.get(User, admin.id).role == "admin"
+
+
+def test_admin_queue_filters_by_status(client, ana, admin):
+    add_report(ana, waste_type="bulky", status="closed")
+    add_report(ana, waste_type="organic")
+    login(client, "admin@mail.com")
+
+    html = client.get("/admin?status=closed").get_data(as_text=True)
+
+    assert "bulky" in html and "organic" not in html

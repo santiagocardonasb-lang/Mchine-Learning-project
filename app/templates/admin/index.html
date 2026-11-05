@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Admin · LocWaste{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/results.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="page">
+  <h1>Admin</h1>
+  <p class="sub">Moderate citizen reports, manage roles and retrain the model.</p>
+
+  <div class="admin-stats">
+    {% for s in statuses %}
+      <a class="card admin-stat {{ 'on' if status == s }}" href="{{ url_for('admin.index', status=s) }}">
+        <span class="label">{{ s | replace("_", " ") }}</span><b>{{ counts[s] }}</b>
+      </a>
+    {% endfor %}
+  </div>
+
+  <h2 id="queue">Report queue</h2>
+  <div class="card table-card">
+    <div class="filter-row">
+      <a class="chip-link {{ 'on' if not status }}" href="{{ url_for('admin.index') }}">All</a>
+      {% for s in statuses %}
+        <a class="chip-link {{ 'on' if status == s }}" href="{{ url_for('admin.index', status=s) }}">{{ s | replace("_", " ") }}</a>
+      {% endfor %}
+    </div>
+    {% if queue.items %}
+      <table class="data">
+        <tr><th>#</th><th>Reported</th><th>Where</th><th>What</th><th>Note</th><th>Status</th></tr>
+        {% for r in queue.items %}
+          <tr>
+            <td>{{ r.id }}</td>
+            <td>{{ r.reported_at.strftime("%Y-%m-%d %H:%M") }}<small>{{ r.user.name if r.user }}</small></td>
+            <td>{{ r.upz.name if r.upz }}<small>{{ r.locality.name if r.locality }}{{ " · " ~ r.neighborhood if r.neighborhood }}</small></td>
+            <td>{{ r.waste_type | replace("_", " ") }}<small>{{ r.size }}</small></td>
+            <td class="note-cell">{{ r.description or "" }}</td>
+            <td>
+              <form class="status-form" method="post" action="{{ url_for('admin.report_status', report_id=r.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="filter" value="{{ status or '' }}">
+                <input type="hidden" name="page" value="{{ queue.page }}">
+                <select name="status" aria-label="Status of report {{ r.id }}">
+                  {% for s in statuses %}<option value="{{ s }}" {{ "selected" if r.status == s }}>{{ s | replace("_", " ") }}</option>{% endfor %}
+                </select>
+                <button class="btn btn-soft" type="submit">Save</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </table>
+      {% if queue.pages > 1 %}
+        <div class="pager">
+          {% if queue.has_prev %}<a class="btn btn-ghost" href="{{ url_for('admin.index', status=status, page=queue.prev_num) }}"><i class="bi bi-arrow-left"></i>Newer</a>{% endif %}
+          <span>Page {{ queue.page }} of {{ queue.pages }}</span>
+          {% if queue.has_next %}<a class="btn btn-ghost" href="{{ url_for('admin.index', status=status, page=queue.next_num) }}">Older<i class="bi bi-arrow-right"></i></a>{% endif %}
+        </div>
+      {% endif %}
+    {% else %}
+      <p class="empty-row">No citizen reports{{ " with this status" if status }}.</p>
+    {% endif %}
+  </div>
+
+  <h2 id="model">Model</h2>
+  <div class="card table-card">
+    <div class="model-row">
+      <p class="note">{{ since_last_run }} of {{ threshold }} new citizen reports since the last run; training starts by itself at {{ threshold }}.</p>
+      <form method="post" action="{{ url_for('model.retrain') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="next" value="{{ url_for('admin.index') }}#model">
+        <button class="btn btn-brand" type="submit" {{ "disabled" if running }}><i class="bi bi-arrow-repeat"></i>{{ "Training…" if running else "Retrain now" }}</button>
+      </form>
+    </div>
+    {% if runs %}
+      <table class="data">
+        <tr><th>Run</th><th>Trained</th><th>Trigger</th><th>Model</th><th>Test macro F1</th></tr>
+        {% for run in runs %}
+          <tr><td>{{ run.id }}{% if run.is_active %} <span class="pill low">active</span>{% endif %}</td>
+            <td>{{ run.trained_at.strftime("%Y-%m-%d %H:%M") }}</td><td>{{ run.trigger }}</td>
+            <td>{{ run.metrics.model_names[run.metrics.chosen_model] }}</td>
+            <td>{{ "%.2f"|format(run.metrics.test.macro_f1) }}</td></tr>
+        {% endfor %}
+      </table>
+    {% else %}
+      <p class="empty-row">No runs yet.</p>
+    {% endif %}
+  </div>
+
+  <h2 id="users">Users</h2>
+  <div class="card table-card">
+    <table class="data">
+      <tr><th>Name</th><th>Email</th><th>Joined</th><th>Role</th></tr>
+      {% for u in users %}
+        <tr>
+          <td>{{ u.name }}</td><td>{{ u.email }}</td><td>{{ u.created_at.strftime("%Y-%m-%d") }}</td>
+          <td>
+            {% if u.id == current_user.id %}
+              {{ u.role }} <small>(you)</small>
+            {% else %}
+              <form class="status-form" method="post" action="{{ url_for('admin.user_role', user_id=u.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <select name="role" aria-label="Role of {{ u.name }}">
+                  {% for role in roles %}<option value="{{ role }}" {{ "selected" if u.role == role }}>{{ role }}</option>{% endfor %}
+                </select>
+                <button class="btn btn-soft" type="submit">Save</button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+{% endblock %}
