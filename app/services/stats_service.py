@@ -26,13 +26,16 @@ def reports_this_month() -> int:
 
 
 def top_priority_zones(limit: int = 5) -> list[dict]:
+    # Latest active run only, the same rule as training_service.active_run().
+    run = ModelRun.query.filter_by(is_active=True).order_by(ModelRun.trained_at.desc()).first()
+    if run is None:
+        return []
     rows = (
         db.session.query(Upz.name, Locality.name, RiskPrediction.probability)
         .select_from(RiskPrediction)
-        .join(ModelRun, RiskPrediction.model_run_id == ModelRun.id)
         .join(Upz, RiskPrediction.upz_id == Upz.id)
         .join(Locality, Upz.locality_id == Locality.id)
-        .filter(ModelRun.is_active.is_(True), RiskPrediction.level == "high")
+        .filter(RiskPrediction.model_run_id == run.id, RiskPrediction.level == "high")
         .order_by(RiskPrediction.probability.desc())
         .limit(limit)
         .all()

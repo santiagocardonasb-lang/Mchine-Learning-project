@@ -60,7 +60,7 @@ def zone_stats(months: int) -> dict[str, dict]:
 
 
 def active_predictions() -> tuple[ModelRun | None, dict[str, dict]]:
-    run = ModelRun.query.filter_by(is_active=True).one_or_none()
+    run = ModelRun.query.filter_by(is_active=True).order_by(ModelRun.trained_at.desc()).first()
     if run is None:
         return None, {}
     rows = (
