@@ -8,12 +8,15 @@ from flask import Flask, current_app
 
 from app.extensions import db
 from app.models import Locality, ModelRun, Report, RiskPrediction, Upz
+from app.models.user import utcnow
 from ml import config as ml_config
 from ml.features import REPORT_COLUMNS, build_panel, zone_table
 from ml.train import NotEnoughData, train
 
 # One training at a time per process; a second request while one runs is skipped.
 _lock = threading.Lock()
+# Start of the last background attempt, failed or not: a failing run must not retrain on every new report.
+_last_attempt = None
 
 
 def reports_frame() -> pd.DataFrame:
@@ -53,14 +56,17 @@ def run(trigger: str) -> ModelRun:
         db.session.add(RiskPrediction(model_run=run, upz_id=upz_ids[row.upz_code], period=row.period,
                                       level=row.level, probability=float(row.probability)))
 
-    ModelRun.query.filter(ModelRun.is_active.is_(True)).update({"is_active": False})
+    # Old artifacts are dropped to save space; their params and metrics stay for the run history.
+    db.session.flush()
+    ModelRun.query.filter(ModelRun.id != run.id).update({"is_active": False, "artifact": None})
     run.is_active = True
     db.session.commit()
     return run
 
 
 def active_run() -> ModelRun | None:
-    return ModelRun.query.filter_by(is_active=True).one_or_none()
+    # Latest first: two concurrent runs in different processes can both end up active.
+    return ModelRun.query.filter_by(is_active=True).order_by(ModelRun.trained_at.desc()).first()
 
 
 def recent_runs(limit: int = 10) -> list[ModelRun]:
@@ -68,11 +74,13 @@ def recent_runs(limit: int = 10) -> list[ModelRun]:
 
 
 def reports_since_last_run() -> int:
-    """Non-rejected citizen reports created after the latest run (all of them if none ran)."""
+    """Non-rejected citizen reports created after the latest run and the latest attempt."""
     query = Report.query.filter(Report.source == "user", Report.status != "rejected")
     last = ModelRun.query.order_by(ModelRun.trained_at.desc()).first()
     if last is not None:
         query = query.filter(Report.reported_at > last.trained_at)
+    if _last_attempt is not None:
+        query = query.filter(Report.reported_at > _last_attempt)
     return query.count()
 
 
@@ -81,6 +89,8 @@ def is_running() -> bool:
 
 
 def _run_locked(app: Flask, trigger: str) -> None:
+    global _last_attempt
+    _last_attempt = utcnow()
     with app.app_context():
         try:
             run(trigger)

@@ -3,6 +3,7 @@
 {% block head %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/results.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -31,7 +32,24 @@
     </div>
   </div>
 
-  {% block home_stats %}{% endblock %}
+  {% block home_stats %}
+  <div class="city-stats">
+    <div class="card city-stat">
+      <span class="label">Reports in the last 12 months</span>
+      <b>{{ "{:,}".format(city.reports_12_months) }}</b>
+    </div>
+    <div class="card city-stat">
+      <span class="label">UPZ at high risk{{ " in " ~ city.period.strftime("%B") if city.period }}</span>
+      <b class="{{ 'high-ink' if city.high_zones }}">{{ city.high_zones if city.period else "—" }}</b>
+      <small>of {{ city.zones }}</small>
+    </div>
+    <div class="card city-stat">
+      <span class="label">Model last trained</span>
+      <b>{{ city.last_run.strftime("%b %d") if city.last_run else "Not yet" }}</b>
+      <a class="link" href="{{ url_for('model.index') }}">See the metrics <i class="bi bi-arrow-right"></i></a>
+    </div>
+  </div>
+  {% endblock %}
 
   <div class="steps">
     <div class="card step">

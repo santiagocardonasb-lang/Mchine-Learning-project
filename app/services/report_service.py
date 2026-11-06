@@ -1,6 +1,7 @@
 from collections.abc import Callable
 
 from flask import current_app
+from sqlalchemy.orm import joinedload
 
 from app.extensions import db
 from app.models import Locality, Report, Upz, User
@@ -66,6 +67,15 @@ def create(
             db.session.rollback()
             current_app.logger.exception("on_created hook %r failed for report %s", hook, report_id)
     return report
+
+
+def list_for_user(user: User) -> list[Report]:
+    return (
+        Report.query.filter_by(user_id=user.id)
+        .options(joinedload(Report.upz), joinedload(Report.locality))
+        .order_by(Report.reported_at.desc())
+        .all()
+    )
 
 
 def public_dict(report: Report) -> dict:

@@ -1,7 +1,6 @@
 """Every parameter of the synthetic data and the model. The model page renders these values."""
 
 RANDOM_STATE = 42
-TIMEZONE = "America/Bogota"
 
 # Synthetic history (spec section 8)
 SYNTHETIC_START = "2024-11-01"

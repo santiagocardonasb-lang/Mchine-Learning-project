@@ -1,16 +1,17 @@
-
 import click
 import pandas as pd
 from flask import Flask
 from sqlalchemy import insert
 
 from app.extensions import db
-from app.models import Report, Upz
+from app.models import SIZES, SOURCES, STATUSES, WASTE_TYPES, Report, Upz
 from app.services import training_service
 from ml.synthetic import OUTPUT as SYNTHETIC_CSV
 from ml.train import NotEnoughData
 
 BOOL_COLUMNS = ["has_rodents", "has_insects", "has_odor", "near_water"]
+# Core inserts skip the model validators, so every row is checked against the same values.
+ALLOWED = {"waste_type": WASTE_TYPES, "size": SIZES, "status": STATUSES, "source": SOURCES}
 
 
 def seed_synthetic(replace: bool = False) -> int:
@@ -40,6 +41,10 @@ def seed_synthetic(replace: bool = False) -> int:
             **{c: r[c] in (True, "True") for c in BOOL_COLUMNS},
             "source": "synthetic",
         })
+        for field, allowed in ALLOWED.items():
+            if rows[-1][field] not in allowed:
+                raise click.ClickException(f"Invalid {field} {rows[-1][field]!r} in {SYNTHETIC_CSV.name} "
+                                           f"(row {len(rows)}). Allowed: {', '.join(allowed)}.")
     # Core insert in chunks: one round trip per chunk instead of one per report.
     for start in range(0, len(rows), 2000):
         db.session.execute(insert(Report), rows[start:start + 2000])
