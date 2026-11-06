@@ -8,13 +8,13 @@ from ml.train import cross_validate, split_months, train
 
 
 def report(upz, when):
-    return {"upz_code": upz, "reported_at": pd.Timestamp(when, tz="America/Bogota"),
-            "updated_at": pd.Timestamp(when, tz="America/Bogota"), "size": "small",
+    return {"upz_code": upz, "reported_at": pd.Timestamp(when, tz="UTC"),
+            "updated_at": pd.Timestamp(when, tz="UTC"), "size": "small",
             "has_rodents": False, "has_insects": False, "has_odor": False,
             "near_water": False, "status": "open"}
 
 
-def synthetic_panel(n_months=18):
+def synthetic_reports(n_months=18):
     zones = zone_table(
         pd.DataFrame({"upz_code": [str(i) for i in range(30)], "locality_code": ["1"] * 30,
                       "area_km2": [1.0] * 30, "critical_points": list(range(30)),
@@ -28,7 +28,11 @@ def synthetic_panel(n_months=18):
         for month in months:
             for _ in range(rng.poisson(1 + cp / 3)):
                 rows.append(report(code, month + pd.Timedelta(days=int(rng.integers(0, 27)))))
-    return build_panel(pd.DataFrame(rows), zones)
+    return pd.DataFrame(rows), zones
+
+
+def synthetic_panel(n_months=18, now=None):
+    return build_panel(*synthetic_reports(n_months), now=now)
 
 
 def test_split_keeps_test_months_last():
@@ -68,3 +72,24 @@ def test_train_reports_all_models_and_predicts_next_month(monkeypatch):
 def test_train_needs_enough_months():
     with pytest.raises(NotEnoughData):
         train(synthetic_panel(n_months=6))
+
+def test_partial_month_changes_neither_labels_nor_predictions(monkeypatch):
+    monkeypatch.setattr(config, "N_ESTIMATORS", 20)
+    reports, zones = synthetic_reports()  # 2025-01 to 2026-06
+    now = pd.Timestamp("2026-07-20", tz="UTC")
+    partial = pd.DataFrame([report(code, "2026-07-05") for code in zones["upz_code"] for _ in range(5)])
+    before = train(build_panel(reports, zones, now=now))
+    after = train(build_panel(pd.concat([reports, partial], ignore_index=True), zones, now=now))
+
+    assert after.metrics["class_balance"] == before.metrics["class_balance"]
+    assert after.metrics["cuts"] == before.metrics["cuts"]
+    pd.testing.assert_frame_equal(after.predictions, before.predictions)
+
+
+def test_prediction_period_is_the_month_after_the_last_complete_month(monkeypatch):
+    monkeypatch.setattr(config, "N_ESTIMATORS", 20)
+    # 2026-06 is the current month here, so 2026-05 is the last complete one.
+    result = train(synthetic_panel(now=pd.Timestamp("2026-06-10", tz="UTC")))
+
+    assert result.metrics["months"]["last"] == "2026-04"  # the last labelled month
+    assert result.metrics["period"] == "2026-06-01"

@@ -34,25 +34,30 @@ def zone_table(zones: pd.DataFrame, localities: pd.DataFrame) -> pd.DataFrame:
               "public_space_m2_per_inhabitant", "population", "population_density"]]
 
 
-def _local(series: pd.Series) -> pd.Series:
-    """Timestamps as naive Bogotá time, so a report at 11 pm on the 31st stays in its month."""
-    return pd.to_datetime(series, utc=True).dt.tz_convert(config.TIMEZONE).dt.tz_localize(None)
+def _utc(series: pd.Series) -> pd.Series:
+    """Timestamps as naive UTC: months are UTC calendar months, the rule stats_service uses."""
+    return pd.to_datetime(series, utc=True).dt.tz_localize(None)
 
 
-def build_panel(reports: pd.DataFrame, zones: pd.DataFrame) -> pd.DataFrame:
-    """One row per UPZ and month, from the first to the last month with reports.
+def build_panel(reports: pd.DataFrame, zones: pd.DataFrame, now: pd.Timestamp | None = None) -> pd.DataFrame:
+    """One row per UPZ and month, from the first to the last complete month with reports.
 
-    Every feature of month t uses reports up to the end of month t only. `next_rate` is the
-    following month's reports per 10,000 inhabitants (NaN for the last month, which is the one
-    we predict from).
+    The current UTC month (relative to `now`, default the current time) is still partial, so its
+    reports are left out. Every feature of month t uses reports up to the end of month t only.
+    `next_rate` is the following month's reports per 10,000 inhabitants (NaN for the last month,
+    which is the one we predict from).
     """
+    now = pd.Timestamp.now(tz="UTC") if now is None else pd.Timestamp(now).tz_convert("UTC")
+    current_month = now.tz_localize(None).to_period("M").to_timestamp()
     r = reports[reports["status"] != "rejected"].copy()
+    r["month"] = _utc(r["reported_at"]).dt.to_period("M").dt.to_timestamp()
+    r = r[r["month"] < current_month]
     if r.empty:
-        raise NotEnoughData(f"There are no reports yet; training needs {config.MIN_MONTHS} months of them.")
+        raise NotEnoughData("There are no reports from a complete month yet; "
+                            f"training needs {config.MIN_MONTHS} months of them.")
     r["upz_code"] = r["upz_code"].astype(str)
-    r["month"] = _local(r["reported_at"]).dt.to_period("M").dt.to_timestamp()
     month_end = r["month"] + pd.offsets.MonthBegin(1)
-    updated = _local(r["updated_at"])
+    updated = _utc(r["updated_at"])
     # Closing is a report's last change, so a closed report closed after month end was still open then.
     r["open_at_end"] = (r["status"] != "closed") | (updated >= month_end)
     r["large"] = r["size"] == "large"
