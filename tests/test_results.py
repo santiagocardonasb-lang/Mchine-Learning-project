@@ -160,6 +160,13 @@ def test_my_reports_lists_only_own_reports(client, ana):
     assert report_service.list_for_user(ana)[0].user_id == ana.id
 
 
+def test_map_and_my_reports_have_no_stray_markdown(client, ana):
+    login(client, "ana@mail.com")
+
+    for path in ("/map", "/reports/mine"):
+        assert "```" not in client.get(path).get_data(as_text=True)
+
+
 def test_my_reports_requires_login(client, db_session):
     response = client.get("/reports/mine")
     assert response.status_code == 302

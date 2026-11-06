@@ -38,7 +38,7 @@ def create_app(config_name: str | None = None) -> Flask:
 
         return db.session.get(User, int(user_id))
 
-    from app import models  # noqa: F401
+    from app import models  # noqa: F401  (registers tables so Flask-Migrate sees them)
     from app.blueprints.admin import admin_bp
     from app.blueprints.api import api_bp
     from app.blueprints.auth import auth_bp

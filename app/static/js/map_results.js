@@ -212,6 +212,13 @@
         );
 
         if (highlight) map.removeLayer(highlight);
+        highlight = null;
+
+        // No shape for this name around the point: just center the map on it.
+        if (!feature) {
+          map.setView(point, 16);
+          return;
+        }
 
         highlight = L.geoJSON(feature, {
           interactive: false,

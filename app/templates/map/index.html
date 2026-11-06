@@ -1,4 +1,3 @@
-```html
 {% extends "base.html" %}
 
 {% block title %}Risk map · LocWaste{% endblock %}
@@ -36,6 +35,10 @@
     <div>
       <h2>Bogotá at a glance</h2>
       <p id="riskPeriod">Citizen reports and next-month risk by UPZ</p>
+    </div>
+
+    <div class="mini-stats">
+      <div><span class="label">Reports this month</span><b>{{ reports_this_month }}</b></div>
     </div>
 
     <div class="mini-stats two">

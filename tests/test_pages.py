@@ -99,6 +99,14 @@ def test_home_counts_non_rejected_reports_of_current_month(client, db_session):
     assert reports_this_month_on_page(client.get("/").get_data(as_text=True)) == 2
 
 
+def test_map_shows_reports_of_current_month(client, db_session):
+    add_report(month_start() + timedelta(hours=1))
+    add_report(month_start() - timedelta(seconds=1))
+    db.session.commit()
+
+    assert reports_this_month_on_page(client.get("/map").get_data(as_text=True)) == 1
+
+
 def test_reports_this_month_counts_only_user_source(db_session):
     start = month_start()
     add_report(start + timedelta(hours=1))
@@ -130,6 +138,16 @@ def test_top_priority_zones_uses_active_run_high_level_only(db_session):
         {"upz": "Patio Bonito", "locality": "Kennedy", "probability": 0.95},
         {"upz": "Bosa Central", "locality": "Kennedy", "probability": 0.91},
     ]
+
+
+def test_top_priority_zones_uses_latest_of_two_active_runs(db_session):
+    add_run(True, [("Old Zone", "high", 0.99)])
+    add_run(True, [("Bosa Central", "high", 0.91)])
+    old, new = ModelRun.query.order_by(ModelRun.id).all()
+    old.trained_at = new.trained_at - timedelta(days=1)
+    db.session.commit()
+
+    assert [z["upz"] for z in stats_service.top_priority_zones()] == ["Bosa Central"]
 
 
 def test_top_priority_zones_respects_limit(db_session):
