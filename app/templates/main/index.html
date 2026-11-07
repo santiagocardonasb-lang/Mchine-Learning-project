@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}LocWaste · Waste accumulation risk in Bogotá{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/presentation.css') }}">
+{% endblock %}
+
+{% block header %}
+{% set nav_action %}
+  {% if current_user.is_authenticated %}
+    <a class="btn btn-brand" href="{{ url_for('main.app_home') }}">Go to the app<i class="bi bi-arrow-right"></i></a>
+  {% else %}
+    <a class="btn btn-brand" href="{{ url_for('auth.login') }}">Sign in</a>
+  {% endif %}
+{% endset %}
+{% include "partials/bare_nav.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="page presentation">
+  <header class="pres-hero">
+    <span class="eyebrow"><i class="bi bi-mortarboard"></i>Machine Learning project · CRISP-DM</span>
+    <h1>{{ content.PROJECT_TITLE }}</h1>
+    <p class="lead">{{ content.SOLUTION_INTRO }}</p>
+    <div class="ctas">
+      {% if current_user.is_authenticated %}
+        <a class="btn btn-brand" href="{{ url_for('main.app_home') }}">Go to the app<i class="bi bi-arrow-right"></i></a>
+      {% else %}
+        <a class="btn btn-brand" href="{{ url_for('auth.login') }}"><i class="bi bi-box-arrow-in-right"></i>Sign in</a>
+      {% endif %}
+      <a class="btn btn-soft" href="#phases"><i class="bi bi-diagram-3"></i>See the process</a>
+    </div>
+    <nav class="pres-toc" aria-label="Sections">
+      <a href="#context">Context</a><a href="#solution">Solution</a><a href="#definition">Definition</a>
+      <a href="#objectives">Objectives</a><a href="#results">Results</a><a href="#phases">CRISP-DM</a>
+    </nav>
+  </header>
+
+  <section id="context" class="card prose">
+    <h2>Context and problem</h2>
+    {% for paragraph in content.PROBLEM_STATEMENT %}
+      <p class="note">{{ paragraph }}</p>
+    {% endfor %}
+  </section>
+
+  <section id="solution">
+    <h2>Proposed solution</h2>
+    <div class="steps">
+      {% for step in content.SOLUTION_STEPS %}
+        <div class="card step">
+          <div class="num {{ step.color }}"><i class="bi bi-{{ step.icon }}"></i></div>
+          <h3>{{ step.title }}</h3>
+          <p>{{ step.text }}</p>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section id="definition" class="card prose">
+    <h2>Definition</h2>
+    <p class="note">{{ content.DEFINITION }}</p>
+    <p class="note"><b>Research question.</b> {{ content.RESEARCH_QUESTION }}</p>
+  </section>
+
+  <section id="objectives" class="card prose">
+    <h2>Objectives</h2>
+    <p class="note"><b>General objective.</b> {{ content.GENERAL_OBJECTIVE }}</p>
+    <ul class="pres-list">
+      {% for objective in content.SPECIFIC_OBJECTIVES %}<li>{{ objective }}</li>{% endfor %}
+    </ul>
+  </section>
+
+  <section id="results">
+    <h2>Results</h2>
+    {% if run %}
+      {% set m = run.metrics %}
+      <div class="result-grid">
+        <div class="card result">
+          <span class="label">Chosen model</span>
+          <b>{{ m.model_names[m.chosen_model] }}</b>
+          <small>Run {{ run.id }} · trained {{ run.trained_at.strftime("%b %d, %Y") }} on {{ "{:,}".format(run.n_rows) }} zone-months</small>
+        </div>
+        <div class="card result">
+          <span class="label">Test macro-F1</span>
+          <b>{{ "%.2f"|format(m.test.macro_f1) }}</b>
+          <small>vs. {{ "%.2f"|format(m.baseline_test.macro_f1) }} for the most-frequent baseline</small>
+        </div>
+        <div class="card result">
+          <span class="label">High-risk UPZ{{ " in " ~ city.period.strftime("%B %Y") if city.period }}</span>
+          <b class="high-ink">{{ city.high_zones }}</b>
+          <small>of {{ city.zones }} UPZ{{ ": " ~ priority_zones | map(attribute="upz") | join(", ") if priority_zones }}</small>
+        </div>
+      </div>
+    {% else %}
+      <div class="card empty"><i class="bi bi-hourglass-split"></i>Results appear after the first model run.</div>
+    {% endif %}
+  </section>
+
+  <section id="phases">
+    <h2>CRISP-DM phases</h2>
+    <p class="sub">The methodology applied to predicting waste accumulation risk by UPZ, step by step.</p>
+    {# Without JavaScript the tab list stays hidden and every phase is shown in order. #}
+    <div class="phase-tabs" role="tablist" aria-label="CRISP-DM phases" hidden>
+      {% for phase in content.PHASES %}
+        <button type="button" role="tab" id="tab-{{ phase.slug }}" aria-controls="phase-{{ phase.slug }}"
+                aria-selected="{{ 'true' if loop.first else 'false' }}" tabindex="{{ 0 if loop.first else -1 }}">
+          <span class="tab-icon"><i class="bi bi-{{ phase.icon }}"></i></span>
+          <span><small>Phase {{ loop.index }}</small>{{ phase.name }}</span>
+        </button>
+      {% endfor %}
+    </div>
+    {% for phase in content.PHASES %}
+      <div class="card phase-panel" role="tabpanel" id="phase-{{ phase.slug }}" aria-labelledby="tab-{{ phase.slug }}" tabindex="0">
+        <span class="label">Phase {{ loop.index }}</span>
+        <h3>{{ phase.name }}</h3>
+        <p class="note">{{ phase.summary }}</p>
+        <ol class="phase-steps">
+          {% for step in phase.steps %}
+            <li>
+              <b>{{ step.title }}</b>
+              <p class="note">{{ step.text }}</p>
+              {% if step.bullets %}
+                <ul class="pres-list">{% for item in step.bullets %}<li>{{ item }}</li>{% endfor %}</ul>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ol>
+      </div>
+    {% endfor %}
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/phase_tabs.js') }}"></script>
+{% endblock %}
