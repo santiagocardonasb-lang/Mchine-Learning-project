@@ -1,37 +1,51 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from sqlalchemy import case, func
 
 from app.extensions import db
 from app.models import Locality, ModelRun, Report, RiskPrediction, Upz
 
-PERIOD_MONTHS = (1, 3, 12)
+# Map periods as [first, end) offsets in UTC calendar months from the current one:
+# this month so far, the previous full month, and the current month plus the 2 or 11 before it.
+PERIOD_MONTHS = {"this_month": (0, 1), "last_month": (-1, 0), "3m": (-2, 1), "12m": (-11, 1)}
+PERIODS = tuple(PERIOD_MONTHS)
 SIZE_WEIGHT = {"small": 0.5, "medium": 0.75, "large": 1.0}
+NO_REPORTS = {"reports": 0, "open": None, "vectors_share": None, "top_type": None}
 
 
-def since(months: int) -> datetime:
-    """Start of the window: the last `months` × 30 days, so 'last month' is never a 2-day stub."""
-    return datetime.now(timezone.utc) - timedelta(days=30 * months)
+def _month_start(now: datetime, offset: int) -> datetime:
+    year, month = divmod(now.year * 12 + now.month - 1 + offset, 12)
+    return datetime(year, month + 1, 1, tzinfo=timezone.utc)
 
 
-def _visible(months: int):
-    return Report.query.filter(Report.status != "rejected", Report.reported_at >= since(months))
+def period_bounds(period: str, now: datetime | None = None) -> tuple[datetime, datetime]:
+    """Aware UTC [start, end) of a map period, the same convention as stats_service's month bounds."""
+    now = now or datetime.now(timezone.utc)
+    first, end = PERIOD_MONTHS[period]
+    return _month_start(now, first), _month_start(now, end)
 
 
-def heatmap_points(months: int, locality_code: str | None = None) -> list[list[float]]:
-    """[lat, lon, weight] of every non-rejected report in the window; larger piles weigh more."""
-    query = _visible(months).with_entities(Report.latitude, Report.longitude, Report.size)
+def _visible(period: str):
+    start, end = period_bounds(period)
+    return Report.query.filter(
+        Report.status != "rejected", Report.reported_at >= start, Report.reported_at < end
+    )
+
+
+def heatmap_points(period: str, locality_code: str | None = None) -> list[list[float]]:
+    """[lat, lon, weight] of every non-rejected report in the period; larger piles weigh more."""
+    query = _visible(period).with_entities(Report.latitude, Report.longitude, Report.size)
     if locality_code:
         query = query.join(Locality, Report.locality_id == Locality.id).filter(Locality.code == locality_code)
     return [[round(lat, 5), round(lon, 5), SIZE_WEIGHT[size]] for lat, lon, size in query]
 
 
-def zone_stats(months: int) -> dict[str, dict]:
-    """Per UPZ code: reports in the window, open ones, share with vectors and most common type."""
+def zone_stats(period: str) -> dict[str, dict]:
+    """Per UPZ code with reports in the period: open ones, share with vectors and most common type."""
     vectors = case((Report.has_rodents | Report.has_insects | Report.has_odor, 1), else_=0)
     still_open = case((Report.status.in_(("open", "in_progress")), 1), else_=0)
     rows = (
-        _visible(months)
+        _visible(period)
         .join(Upz, Report.upz_id == Upz.id)
         .with_entities(Upz.code, func.count(Report.id), func.sum(still_open), func.sum(vectors))
         .group_by(Upz.code)
@@ -47,7 +61,7 @@ def zone_stats(months: int) -> dict[str, dict]:
     }
 
     by_type = (
-        _visible(months)
+        _visible(period)
         .join(Upz, Report.upz_id == Upz.id)
         .with_entities(Upz.code, Report.waste_type, func.count(Report.id))
         .group_by(Upz.code, Report.waste_type)
@@ -74,10 +88,10 @@ def active_predictions() -> tuple[ModelRun | None, dict[str, dict]]:
     }
 
 
-def risk_by_zone(months: int) -> dict:
-    """Everything the map needs per UPZ: predicted level and the window's report stats."""
+def risk_by_zone(period: str) -> dict:
+    """Everything the map needs per UPZ: predicted level and the period's report stats."""
     run, predictions = active_predictions()
-    stats = zone_stats(months)
+    stats = zone_stats(period)
     zones = []
     for code, name, locality in (
         db.session.query(Upz.code, Upz.name, Locality.name).join(Locality).order_by(Upz.name)
@@ -89,13 +103,13 @@ def risk_by_zone(months: int) -> dict:
             "locality": locality,
             "level": prediction.get("level"),
             "probability": prediction.get("probability"),
-            **stats.get(code, {"reports": 0, "open": 0, "vectors_share": 0, "top_type": None}),
+            **stats.get(code, NO_REPORTS),
         })
-    period = next(iter(predictions.values()))["period"] if predictions else None
+    predicted = next(iter(predictions.values()))["period"] if predictions else None
     return {
-        "period": period.isoformat() if period else None,
+        "period": predicted.isoformat() if predicted else None,
         "run_id": run.id if run else None,
-        "months": months,
+        "report_period": period,
         "totals": {
             "reports": sum(z["reports"] for z in zones),
             "high": sum(1 for z in zones if z["level"] == "high"),
@@ -110,7 +124,7 @@ def city_stats() -> dict:
     levels = [p["level"] for p in predictions.values()]
     period = next(iter(predictions.values()))["period"] if predictions else None
     return {
-        "reports_12_months": _visible(12).count(),
+        "reports_12_months": _visible("12m").count(),
         "high_zones": levels.count("high"),
         "zones": Upz.query.count(),
         "period": period,
