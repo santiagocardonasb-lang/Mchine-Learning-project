@@ -39,55 +39,55 @@ def add_run(is_active, predictions):
     db.session.commit()
 
 
+@pytest.fixture
+def signed_in(client, db_session):
+    auth_service.register("Ana", "ana@mail.com", "secret123")
+    client.post("/auth/login", data={"email": "ana@mail.com", "password": "secret123"})
+    return client
+
+
 def reports_this_month_on_page(html: str) -> int:
     match = re.search(r"Reports this month</span>\s*<b>(\d+)</b>", html)
     assert match, "Reports this month card not found"
     return int(match.group(1))
 
 
-@pytest.mark.parametrize("path", ["/", "/about", "/how-it-works"])
-def test_pages_return_200(client, db_session, path):
-    assert client.get(path).status_code == 200
-
-
-def test_home_has_headline_and_ctas(client, db_session):
-    html = client.get("/").get_data(as_text=True)
+def test_app_home_has_headline_and_ctas(signed_in):
+    html = signed_in.get("/app").get_data(as_text=True)
     assert "Know where waste" in html
     assert 'href="/reports/new"' in html
     assert 'href="/map"' in html
 
 
-def test_about_has_project_content(client, db_session):
-    html = client.get("/about").get_data(as_text=True)
+def test_presentation_has_project_content(client, db_session):
+    html = client.get("/").get_data(as_text=True)
     assert "General objective" in html
     assert "Research question" in html
     assert "LimpIA" not in html
 
 
-def test_how_it_works_mentions_data_sources(client, db_session):
-    html = client.get("/how-it-works").get_data(as_text=True)
+def test_presentation_mentions_data_sources(client, db_session):
+    html = client.get("/").get_data(as_text=True)
     assert "UAESP" in html
     assert "SDP" in html
 
 
-def test_nav_shows_sign_in_for_guests(client, db_session):
+def test_presentation_shows_sign_in_for_guests(client, db_session):
     html = client.get("/").get_data(as_text=True)
     assert "Sign in" in html
     assert "Sign out" not in html
-    assert "Report waste" in html
+    assert "Report waste" not in html
 
 
-def test_nav_shows_sign_out_for_logged_in_user(client, db_session):
-    auth_service.register("Ana", "ana@mail.com", "secret123")
-    client.post("/auth/login", data={"email": "ana@mail.com", "password": "secret123"})
-    html = client.get("/").get_data(as_text=True)
+def test_nav_shows_sign_out_for_logged_in_user(signed_in):
+    html = signed_in.get("/app").get_data(as_text=True)
     assert "Sign out" in html
     assert "Ana" in html
     assert 'action="/auth/logout"' in html
     assert "Sign in" not in html
 
 
-def test_home_counts_non_rejected_reports_of_current_month(client, db_session):
+def test_app_home_counts_non_rejected_reports_of_current_month(signed_in):
     start = month_start()
     add_report(start + timedelta(hours=1))
     add_report(start + timedelta(minutes=5), status="closed")
@@ -96,15 +96,7 @@ def test_home_counts_non_rejected_reports_of_current_month(client, db_session):
     db.session.commit()
 
     assert stats_service.reports_this_month() == 2
-    assert reports_this_month_on_page(client.get("/").get_data(as_text=True)) == 2
-
-
-def test_map_shows_reports_of_current_month(client, db_session):
-    add_report(month_start() + timedelta(hours=1))
-    add_report(month_start() - timedelta(seconds=1))
-    db.session.commit()
-
-    assert reports_this_month_on_page(client.get("/map").get_data(as_text=True)) == 1
+    assert reports_this_month_on_page(signed_in.get("/app").get_data(as_text=True)) == 2
 
 
 def test_reports_this_month_counts_only_user_source(db_session):
@@ -121,8 +113,8 @@ def test_reports_this_month_counts_only_user_source(db_session):
     assert stats_service.reports_this_month() == 1
 
 
-def test_home_without_predictions_shows_placeholder(client, db_session):
-    html = client.get("/").get_data(as_text=True)
+def test_app_home_without_predictions_shows_placeholder(signed_in):
+    html = signed_in.get("/app").get_data(as_text=True)
     assert "Predictions appear after the first model run" in html
     assert "Highest risk next month" not in html
 
@@ -156,9 +148,9 @@ def test_top_priority_zones_respects_limit(db_session):
     assert [z["upz"] for z in zones] == ["Zone 7", "Zone 6", "Zone 5", "Zone 4", "Zone 3"]
 
 
-def test_home_shows_priority_zones_and_highest_risk(client, db_session):
+def test_app_home_shows_priority_zones_and_highest_risk(signed_in):
     add_run(True, [("Bosa Central", "high", 0.91)])
-    html = client.get("/").get_data(as_text=True)
+    html = signed_in.get("/app").get_data(as_text=True)
     assert "Predictions appear after the first model run" not in html
     assert "Highest risk next month" in html
     assert "Bosa Central" in html

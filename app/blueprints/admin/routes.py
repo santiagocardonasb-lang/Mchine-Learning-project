@@ -12,20 +12,28 @@ from ml import config as ml_config
 @admin_bp.route("")
 @role_required("admin")
 def index():
-    status = request.args.get("status") or None
-    page = request.args.get("page", 1, type=int)
     return render_template(
         "admin/index.html",
-        queue=admin_service.report_queue(status, page),
-        status=status,
-        statuses=STATUSES,
-        counts=admin_service.status_counts(),
         users=admin_service.users(),
         roles=ROLES,
         runs=training_service.recent_runs(5),
         since_last_run=training_service.reports_since_last_run(),
         threshold=ml_config.AUTO_RETRAIN_THRESHOLD,
         running=training_service.is_running(),
+    )
+
+
+@admin_bp.route("/reports")
+@role_required("admin")
+def reports():
+    status = request.args.get("status") or None
+    page = request.args.get("page", 1, type=int)
+    return render_template(
+        "admin/reports.html",
+        queue=admin_service.report_queue(status, page),
+        status=status,
+        statuses=STATUSES,
+        counts=admin_service.status_counts(),
     )
 
 
@@ -40,7 +48,7 @@ def report_status(report_id):
         flash(f"Report {report_id} updated.", "success")
     return redirect(
         url_for(
-            "admin.index",
+            "admin.reports",
             status=request.form.get("filter") or None,
             page=request.form.get("page", 1, type=int),
         )

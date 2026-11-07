@@ -32,6 +32,12 @@ def login(client, email):
     client.post("/auth/login", data={"email": email, "password": "secret123"})
 
 
+@pytest.fixture
+def signed_in(client, ana):
+    login(client, "ana@mail.com")
+    return client
+
+
 def add_report(user, point=KENNEDY, **fields):
     report = report_service.create(
         user,
@@ -67,11 +73,11 @@ def activate_prediction(upz_code, level="high", probability=0.8):
 
 # API
 
-def test_risk_without_model_has_stats_but_no_levels(client, ana):
+def test_risk_without_model_has_stats_but_no_levels(signed_in, ana):
     add_report(ana, has_rodents=True)
     add_report(ana, waste_type="bulky")
 
-    data = client.get("/api/risk?months=3").get_json()
+    data = signed_in.get("/api/risk?period=3m").get_json()
 
     assert data["period"] is None and data["run_id"] is None
     assert len(data["zones"]) == 112
@@ -83,11 +89,11 @@ def test_risk_without_model_has_stats_but_no_levels(client, ana):
     assert data["totals"] == {"reports": 2, "high": 0}
 
 
-def test_risk_with_active_run(client, ana):
+def test_risk_with_active_run(signed_in, ana):
     report = add_report(ana)
     activate_prediction(report.upz.code)
 
-    data = client.get("/api/risk").get_json()
+    data = signed_in.get("/api/risk").get_json()
 
     assert data["period"] == "2026-11-01"
     assert data["totals"]["high"] == 1
@@ -95,41 +101,41 @@ def test_risk_with_active_run(client, ana):
     assert zone["level"] == "high" and zone["probability"] == 0.8
 
 
-def test_rejected_and_old_reports_are_left_out(client, ana):
+def test_rejected_and_old_reports_are_left_out(signed_in, ana):
     add_report(ana, status="rejected")
     add_report(ana, reported_at=datetime.now(timezone.utc) - timedelta(days=200))
     add_report(ana)
 
-    assert client.get("/api/risk?months=3").get_json()["totals"]["reports"] == 1
-    assert client.get("/api/risk?months=12").get_json()["totals"]["reports"] == 2
-    assert len(client.get("/api/heatmap?months=3").get_json()["points"]) == 1
+    assert signed_in.get("/api/risk?period=3m").get_json()["totals"]["reports"] == 1
+    assert signed_in.get("/api/risk?period=12m").get_json()["totals"]["reports"] == 2
+    assert len(signed_in.get("/api/heatmap?period=3m").get_json()["points"]) == 1
 
 
-def test_heatmap_filters_by_locality_and_weights_size(client, ana):
+def test_heatmap_filters_by_locality_and_weights_size(signed_in, ana):
     add_report(ana, KENNEDY, size="large")
     add_report(ana, CANDELARIA, size="small")
     kennedy_code = Report.query.first().locality.code
 
-    everything = client.get("/api/heatmap?months=1").get_json()["points"]
-    kennedy = client.get(
-        f"/api/heatmap?months=1&locality={kennedy_code}"
+    everything = signed_in.get("/api/heatmap?period=this_month").get_json()["points"]
+    kennedy = signed_in.get(
+        f"/api/heatmap?period=this_month&locality={kennedy_code}"
     ).get_json()["points"]
 
     assert len(everything) == 2
     assert kennedy == [[4.628, -74.163, 1.0]]
 
 
-@pytest.mark.parametrize("months", ["2", "abc", "-1"])
-def test_bad_period_is_rejected(client, db_session, months):
-    assert client.get(f"/api/risk?months={months}").status_code == 400
-    assert client.get(f"/api/heatmap?months={months}").status_code == 400
+@pytest.mark.parametrize("period", ["1", "3", "abc", "", "this-month"])
+def test_bad_period_is_rejected(signed_in, period):
+    assert signed_in.get(f"/api/risk?period={period}").status_code == 400
+    assert signed_in.get(f"/api/heatmap?period={period}").status_code == 400
 
 
-def test_public_api_hides_reporters(client, ana):
+def test_api_hides_reporters(signed_in, ana):
     add_report(ana)
 
-    for url in ("/api/risk?months=3", "/api/heatmap?months=3"):
-        body = client.get(url).get_data(as_text=True)
+    for url in ("/api/risk?period=3m", "/api/heatmap?period=3m"):
+        body = signed_in.get(url).get_data(as_text=True)
         assert "user_id" not in body
         assert "ana@mail.com" not in body
         assert "Ana" not in body
@@ -137,11 +143,11 @@ def test_public_api_hides_reporters(client, ana):
 
 # Pages
 
-def test_map_page_has_results_controls(client, db_session):
-    html = client.get("/map").get_data(as_text=True)
+def test_map_page_has_results_controls(signed_in):
+    html = signed_in.get("/map").get_data(as_text=True)
 
     assert 'id="zoneSearch"' in html
-    assert 'data-months="12"' in html
+    assert 'data-period="12m"' in html
     assert "map_results.js" in html
 
 
@@ -184,13 +190,14 @@ def test_admin_changes_report_status(client, ana, admin):
     report = add_report(ana)
     login(client, "admin@mail.com")
 
-    assert "Report queue" in client.get("/admin").get_data(as_text=True)
+    assert "Report queue" in client.get("/admin/reports").get_data(as_text=True)
     response = client.post(
         f"/admin/reports/{report.id}/status",
         data={"status": "rejected"},
     )
 
     assert response.status_code == 302
+    assert response.headers["Location"] == "/admin/reports?page=1"
     assert db.session.get(Report, report.id).status == "rejected"
     assert client.get("/api/risk").get_json()["totals"]["reports"] == 0
 
@@ -235,19 +242,19 @@ def test_admin_queue_filters_by_status(client, ana, admin):
     add_report(ana, waste_type="organic")
     login(client, "admin@mail.com")
 
-    html = client.get("/admin?status=closed").get_data(as_text=True)
+    html = client.get("/admin/reports?status=closed").get_data(as_text=True)
 
     assert "bulky" in html and "organic" not in html
 
 
 # City stats
 
-def test_home_shows_city_stats(client, ana):
+def test_app_home_shows_city_stats(signed_in, ana):
     add_report(ana)
     report = Report.query.one()
     activate_prediction(report.upz.code)
 
-    html = client.get("/").get_data(as_text=True)
+    html = signed_in.get("/app").get_data(as_text=True)
 
     assert "Reports in the last 12 months" in html
     assert "UPZ at high risk in November" in html
@@ -257,9 +264,12 @@ def test_nav_shows_my_reports_and_admin_by_role(client, ana, admin):
     assert "My reports" not in client.get("/").get_data(as_text=True)
 
     login(client, "ana@mail.com")
-    html = client.get("/").get_data(as_text=True)
-    assert "My reports" in html and 'href="/admin"' not in html
+    html = client.get("/app").get_data(as_text=True)
+    assert "My reports" in html
+    assert 'href="/admin"' not in html and 'href="/admin/reports"' not in html
 
     client.post("/auth/logout")
     login(client, "admin@mail.com")
-    assert 'href="/admin"' in client.get("/").get_data(as_text=True)
+    html = client.get("/app").get_data(as_text=True)
+    assert 'href="/admin"' in html and 'href="/admin/reports"' in html
+    assert "All reports" in html

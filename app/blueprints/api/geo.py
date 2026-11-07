@@ -1,4 +1,5 @@
 from flask import current_app, jsonify, request, send_from_directory
+from flask_login import login_required
 
 from app.blueprints.api import api_bp
 from app.services import geo_service
@@ -21,6 +22,7 @@ def upz():
 
 
 @api_bp.get("/geo/locate")
+@login_required
 def locate():
     try:
         lat = float(request.args["lat"])
@@ -34,5 +36,6 @@ def locate():
 
 
 @api_bp.get("/neighborhoods")
+@login_required
 def neighborhoods():
     return jsonify(geo_service.search_neighborhoods(request.args.get("q", "")))

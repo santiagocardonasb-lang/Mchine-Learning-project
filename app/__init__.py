@@ -31,6 +31,8 @@ def create_app(config_name: str | None = None) -> Flask:
     login_manager.init_app(app)
     csrf.init_app(app)
     login_manager.login_view = "auth.login"
+    # JSON endpoints answer guests with 401 instead of redirecting a fetch() to the login page.
+    login_manager.blueprint_login_views = {"api": None}
 
     @login_manager.user_loader
     def load_user(user_id: str):

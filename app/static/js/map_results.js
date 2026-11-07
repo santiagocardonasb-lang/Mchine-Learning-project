@@ -3,7 +3,7 @@
   const css = name => getComputedStyle(document.documentElement).getPropertyValue('--' + name).trim();
   const fold = text => text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
   const LEVEL_LABEL = {low: 'Low', medium: 'Medium', high: 'High'};
-  const PERIOD_LABEL = {1: 'last month', 3: '3 months', 12: '12 months'};
+  const PERIOD_LABEL = {this_month: 'this month', last_month: 'last month', '3m': '3 months', '12m': '12 months'};
   const TYPE_LABEL = {
     household: 'Household',
     construction_debris: 'Debris',
@@ -27,7 +27,7 @@
 
   function initMapResults(risk, urls) {
     const {map} = risk;
-    const state = {months: 3, locality: '', zones: {}, showRisk: true, selected: null};
+    const state = {period: 'this_month', locality: '', zones: {}, showRisk: true, selected: null};
     const heat = L.heatLayer([], {
       radius: 18,
       blur: 22,
@@ -43,7 +43,8 @@
       const base = {color: css('map-line'), weight: .6, opacity: .45};
 
       if (!state.showRisk || !zone || !zone.level) {
-        return {...base, fillColor: css('brand'), fillOpacity: .06};
+        // Zones without reports in the period get no fill at all.
+        return {...base, fillColor: css('brand'), fillOpacity: zone && zone.reports ? .06 : 0};
       }
 
       return {...base, fillColor: css(zone.level), fillOpacity: .32};
@@ -57,7 +58,9 @@
         ? `${LEVEL_LABEL[zone.level]} risk`
         : 'No prediction yet';
 
-      return `${name}<br><small>${level} · ${zone.reports} reports</small>`;
+      const reports = zone.reports ? `${zone.reports} reports` : 'No reports in this period';
+
+      return `${name}<br><small>${level} · ${reports}</small>`;
     }
 
     function restyle() {
@@ -82,22 +85,24 @@
         ? `<span class="pill ${zone.level}"><span class="dot"></span>${LEVEL_LABEL[zone.level]} risk · ${Math.round(zone.probability * 100)}%</span>`
         : '<span class="pill none">No prediction yet</span>';
 
-      $('detailReportsLabel').textContent = `Reports · ${PERIOD_LABEL[state.months]}`;
+      $('detailEmpty').hidden = zone.reports > 0;
+      $('detailStats').hidden = zone.reports === 0;
+      if (!zone.reports) return;
+
+      $('detailReportsLabel').textContent = `Reports · ${PERIOD_LABEL[state.period]}`;
       $('detailReports').textContent = zone.reports;
       $('detailOpen').textContent = zone.open;
-      $('detailType').textContent = zone.top_type ? TYPE_LABEL[zone.top_type] : '–';
-      $('detailVectors').textContent = zone.reports
-        ? Math.round(zone.vectors_share * 100) + '%'
-        : '–';
+      $('detailType').textContent = TYPE_LABEL[zone.top_type];
+      $('detailVectors').textContent = Math.round(zone.vectors_share * 100) + '%';
     }
 
     function loadRisk() {
-      return getJson(`${urls.riskUrl}?months=${state.months}`).then(data => {
+      return getJson(`${urls.riskUrl}?period=${state.period}`).then(data => {
         state.zones = Object.fromEntries(data.zones.map(z => [z.code, z]));
 
         $('statReports').textContent = data.totals.reports.toLocaleString('en');
         $('statHigh').textContent = data.period ? data.totals.high : '–';
-        $('reportsLabel').textContent = `Reports · ${PERIOD_LABEL[state.months]}`;
+        $('reportsLabel').textContent = `Reports · ${PERIOD_LABEL[state.period]}`;
 
         if (data.period) {
           const month = new Date(data.period + 'T12:00:00')
@@ -113,7 +118,7 @@
     }
 
     function loadHeat() {
-      const params = new URLSearchParams({months: state.months});
+      const params = new URLSearchParams({period: state.period});
       if (state.locality) params.set('locality', state.locality);
 
       return getJson(`${urls.heatmapUrl}?${params}`)
@@ -122,10 +127,10 @@
 
     // Period chips
     $('period').addEventListener('click', e => {
-      const button = e.target.closest('button[data-months]');
+      const button = e.target.closest('button[data-period]');
       if (!button) return;
 
-      state.months = Number(button.dataset.months);
+      state.period = button.dataset.period;
 
       $('period').querySelectorAll('button').forEach(b => {
         b.classList.toggle('on', b === button);

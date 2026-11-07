@@ -1,4 +1,4 @@
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import selectinload
 
 from app.extensions import db
 from app.models import STATUSES, Report, User
@@ -12,9 +12,9 @@ class AdminError(Exception):
 
 
 def report_queue(status: str | None, page: int):
-    """Citizen reports, newest first, optionally of one status. Synthetic history is not moderated."""
+    """Every user's reports, newest first, optionally of one status. Synthetic history is not moderated."""
     query = Report.query.filter_by(source="user").options(
-        joinedload(Report.user), joinedload(Report.upz), joinedload(Report.locality)
+        selectinload(Report.user), selectinload(Report.upz), selectinload(Report.locality)
     )
     if status in STATUSES:
         query = query.filter_by(status=status)

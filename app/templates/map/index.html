@@ -25,9 +25,10 @@
       <ul class="card search-results" id="searchResults" role="listbox" hidden></ul>
     </div>
     <div class="card chips" id="period" role="group" aria-label="Period">
-      <button type="button" data-months="1">Last month</button>
-      <button type="button" data-months="3" class="on">3 months</button>
-      <button type="button" data-months="12">12 months</button>
+      <button type="button" data-period="this_month" class="on">This month</button>
+      <button type="button" data-period="last_month">Last month</button>
+      <button type="button" data-period="3m">3 months</button>
+      <button type="button" data-period="12m">12 months</button>
     </div>
   </div>
 
@@ -37,13 +38,9 @@
       <p id="riskPeriod">Citizen reports and next-month risk by UPZ</p>
     </div>
 
-    <div class="mini-stats">
-      <div><span class="label">Reports this month</span><b>{{ reports_this_month }}</b></div>
-    </div>
-
     <div class="mini-stats two">
       <div>
-        <span class="label" id="reportsLabel">Reports · 3 months</span>
+        <span class="label" id="reportsLabel">Reports · this month</span>
         <b id="statReports">–</b>
       </div>
       <div>
@@ -87,7 +84,9 @@
 
     <div id="detailRisk"></div>
 
-    <div class="detail-stats">
+    <p class="detail-empty" id="detailEmpty" hidden><i class="bi bi-inbox"></i>No reports in this period</p>
+
+    <div class="detail-stats" id="detailStats">
       <div><span class="label" id="detailReportsLabel">Reports</span><b id="detailReports">–</b></div>
       <div><span class="label">Still open</span><b id="detailOpen">–</b></div>
       <div><span class="label">Most common</span><b id="detailType">–</b></div>

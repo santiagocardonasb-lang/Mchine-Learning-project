@@ -1,0 +1,8 @@
+{# Header without the app menu, for the presentation and sign-in pages; nav_action is set by the page. #}
+<nav class="nav bare">
+  <a class="brand" href="{{ url_for('main.home') }}"><i class="bi bi-recycle"></i>LocWaste</a>
+  <div class="account">
+    <button class="icon-btn" id="theme-toggle" type="button" title="Toggle theme" aria-label="Toggle theme"><i class="bi bi-moon"></i></button>
+    {{ nav_action }}
+  </div>
+</nav>

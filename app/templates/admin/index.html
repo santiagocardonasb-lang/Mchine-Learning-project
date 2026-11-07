@@ -9,59 +9,7 @@
 {% block content %}
 <div class="page">
   <h1>Admin</h1>
-  <p class="sub">Moderate citizen reports, manage roles and retrain the model.</p>
-
-  <div class="admin-stats">
-    {% for s in statuses %}
-      <a class="card admin-stat {{ 'on' if status == s }}" href="{{ url_for('admin.index', status=s) }}">
-        <span class="label">{{ s | replace("_", " ") }}</span><b>{{ counts[s] }}</b>
-      </a>
-    {% endfor %}
-  </div>
-
-  <h2 id="queue">Report queue</h2>
-  <div class="card table-card">
-    <div class="filter-row">
-      <a class="chip-link {{ 'on' if not status }}" href="{{ url_for('admin.index') }}">All</a>
-      {% for s in statuses %}
-        <a class="chip-link {{ 'on' if status == s }}" href="{{ url_for('admin.index', status=s) }}">{{ s | replace("_", " ") }}</a>
-      {% endfor %}
-    </div>
-    {% if queue.items %}
-      <table class="data">
-        <tr><th>#</th><th>Reported</th><th>Where</th><th>What</th><th>Note</th><th>Status</th></tr>
-        {% for r in queue.items %}
-          <tr>
-            <td>{{ r.id }}</td>
-            <td>{{ r.reported_at.strftime("%Y-%m-%d %H:%M") }}<small>{{ r.user.name if r.user }}</small></td>
-            <td>{{ r.upz.name if r.upz }}<small>{{ r.locality.name if r.locality }}{{ " · " ~ r.neighborhood if r.neighborhood }}</small></td>
-            <td>{{ r.waste_type | replace("_", " ") }}<small>{{ r.size }}</small></td>
-            <td class="note-cell">{{ r.description or "" }}</td>
-            <td>
-              <form class="status-form" method="post" action="{{ url_for('admin.report_status', report_id=r.id) }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="filter" value="{{ status or '' }}">
-                <input type="hidden" name="page" value="{{ queue.page }}">
-                <select name="status" aria-label="Status of report {{ r.id }}">
-                  {% for s in statuses %}<option value="{{ s }}" {{ "selected" if r.status == s }}>{{ s | replace("_", " ") }}</option>{% endfor %}
-                </select>
-                <button class="btn btn-soft" type="submit">Save</button>
-              </form>
-            </td>
-          </tr>
-        {% endfor %}
-      </table>
-      {% if queue.pages > 1 %}
-        <div class="pager">
-          {% if queue.has_prev %}<a class="btn btn-ghost" href="{{ url_for('admin.index', status=status, page=queue.prev_num) }}"><i class="bi bi-arrow-left"></i>Newer</a>{% endif %}
-          <span>Page {{ queue.page }} of {{ queue.pages }}</span>
-          {% if queue.has_next %}<a class="btn btn-ghost" href="{{ url_for('admin.index', status=status, page=queue.next_num) }}">Older<i class="bi bi-arrow-right"></i></a>{% endif %}
-        </div>
-      {% endif %}
-    {% else %}
-      <p class="empty-row">No citizen reports{{ " with this status" if status }}.</p>
-    {% endif %}
-  </div>
+  <p class="sub">Manage roles and retrain the model. Citizen reports are moderated in <a class="link" href="{{ url_for('admin.reports') }}">All reports</a>.</p>
 
   <h2 id="model">Model</h2>
   <div class="card table-card">
