@@ -21,13 +21,13 @@ def safe_next_target() -> str | None:
 
 
 def safe_next_url() -> str:
-    return safe_next_target() or url_for("main.home")
+    return safe_next_target() or url_for("main.app_home")
 
 
 @auth_bp.route("/register", methods=["GET", "POST"])
 def register():
     if current_user.is_authenticated:
-        return redirect(url_for("main.home"))
+        return redirect(url_for("main.app_home"))
     form = RegisterForm()
     if form.validate_on_submit():
         try:
@@ -43,7 +43,7 @@ def register():
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for("main.home"))
+        return redirect(url_for("main.app_home"))
     form = LoginForm()
     if form.validate_on_submit():
         user = auth_service.authenticate(form.email.data, form.password.data)

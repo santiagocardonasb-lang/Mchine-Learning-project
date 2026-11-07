@@ -22,6 +22,8 @@
 
   const nav = document.querySelector('.nav');
   const menuButton = document.getElementById('menu-toggle');
+  // The presentation and sign-in headers have no menu.
+  if (!menuButton) return;
   menuButton.addEventListener('click', function () {
     const open = nav.classList.toggle('open');
     menuButton.setAttribute('aria-expanded', String(open));

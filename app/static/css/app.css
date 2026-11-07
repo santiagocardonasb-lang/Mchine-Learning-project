@@ -16,6 +16,7 @@ button { font: inherit; }
 .account form { margin: 0; }
 .user-name { font-weight: 600; color: var(--fg-muted); }
 .menu-btn { display: none; }
+.nav.bare .account { margin-left: auto; }
 
 /* Components */
 .btn { border: 0; border-radius: 11px; padding: 11px 18px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
@@ -149,17 +150,11 @@ button { font: inherit; }
 .prose { padding: 26px; display: flex; flex-direction: column; gap: 14px; margin-bottom: 18px; }
 .prose h2 { margin: 0; font-size: 18px; }
 .page .steps { padding: 0; }
-.sources { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
-.source { padding: 22px; display: flex; flex-direction: column; gap: 8px; }
-.source h3 { margin: 0; font-size: 16px; letter-spacing: -.02em; }
-.source p { margin: 0; color: var(--fg-muted); font-size: 14px; }
-.page .more { margin-top: 28px; }
 
 /* Auth */
 .auth { min-height: calc(100vh - 64px); display: grid; place-items: center; padding: 24px 16px; }
 .auth .card { width: min(390px, 100%); padding: 30px; display: flex; flex-direction: column; gap: 14px; }
 .auth h1 { margin: 0; font-size: 24px; letter-spacing: -.03em; }
-.auth .brand { font-size: 16px; }
 .auth form { display: flex; flex-direction: column; gap: 14px; }
 .auth .field { display: flex; flex-direction: column; gap: 6px; }
 .auth .error { margin: 0; color: var(--high-ink); font-size: 13px; font-weight: 600; }
@@ -179,7 +174,7 @@ button { font: inherit; }
   .hero { grid-template-columns: 1fr; gap: 32px; padding-top: 36px; }
   .hero h1 { font-size: 34px; }
   .preview { height: 340px; }
-  .steps, .zones, .sources { grid-template-columns: 1fr 1fr; }
+  .steps, .zones { grid-template-columns: 1fr 1fr; }
   .topbar { left: 16px; right: 16px; top: 16px; }
   .side { display: none; }
   .map-page .flashes { top: 76px; }
@@ -193,7 +188,7 @@ button { font: inherit; }
   .report-btn .btn-text { display: none; }
   .report-btn { padding: 11px 13px; }
   .hero h1 { font-size: 30px; }
-  .steps, .zones, .sources { grid-template-columns: 1fr; }
+  .steps, .zones { grid-template-columns: 1fr; }
   .form { padding: 18px; }
   .legend { gap: 10px; padding: 10px 12px; }
 }

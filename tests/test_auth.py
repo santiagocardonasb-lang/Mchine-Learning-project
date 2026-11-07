@@ -32,14 +32,14 @@ def login_via_form(client, email="ana@mail.com", password="secret123", **extra):
     return client.post("/auth/login", data={"email": email, "password": password, **extra})
 
 
-def test_register_then_login_redirects_home_with_session(client, db_session):
+def test_register_then_login_redirects_to_app_with_session(client, db_session):
     response = register_via_form(client)
     assert response.status_code == 302
     assert response.headers["Location"].endswith("/auth/login")
 
     response = login_via_form(client)
     assert response.status_code == 302
-    assert response.headers["Location"] == "/"
+    assert response.headers["Location"] == "/app"
     with client:
         client.get("/")
         assert current_user.is_authenticated
@@ -125,7 +125,7 @@ def test_login_next_ignores_external_targets(client, db_session, target):
         "/auth/login", query_string={"next": target},
         data={"email": "ana@mail.com", "password": "secret123"},
     )
-    assert response.headers["Location"] == "/"
+    assert response.headers["Location"] == "/app"
 
 
 def test_logout_clears_session(client, db_session):
@@ -142,12 +142,12 @@ def test_logout_rejects_get(client, db_session):
     assert client.get("/auth/logout").status_code == 405
 
 
-def test_authenticated_user_visiting_login_is_redirected_home(client, db_session):
+def test_authenticated_user_visiting_login_is_redirected_to_app(client, db_session):
     auth_service.register("Ana", "ana@mail.com", "secret123")
     login_via_form(client)
     response = client.get("/auth/login")
     assert response.status_code == 302
-    assert response.headers["Location"] == "/"
+    assert response.headers["Location"] == "/app"
 
 
 @pytest.fixture

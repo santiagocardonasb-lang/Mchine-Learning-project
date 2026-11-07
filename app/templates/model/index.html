@@ -24,7 +24,7 @@
       {% endif %}
     </div>
     <div class="head-actions">
-      <a class="btn btn-ghost" href="{{ url_for('model.crisp_dm') }}"><i class="bi bi-diagram-3"></i>CRISP-DM</a>
+      <a class="btn btn-ghost" href="{{ url_for('main.home', _anchor='phases') }}"><i class="bi bi-diagram-3"></i>CRISP-DM</a>
       {% if current_user.is_authenticated and current_user.is_admin %}
         <form method="post" action="{{ url_for('model.retrain') }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

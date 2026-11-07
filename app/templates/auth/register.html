@@ -2,12 +2,16 @@
 
 {% block title %}Create account · LocWaste{% endblock %}
 
+{% block header %}
+{% set nav_action %}<a class="btn btn-ghost" href="{{ url_for('main.home') }}"><i class="bi bi-arrow-left"></i>Back to project</a>{% endset %}
+{% include "partials/bare_nav.html" %}
+{% endblock %}
+
 {% block content %}
 <div class="auth">
   <div class="card">
-    <div class="brand"><i class="bi bi-recycle"></i>LocWaste</div>
     <h1>Create your account</h1>
-    <p class="note">Join to report waste points and follow them.</p>
+    <p class="note">Join to use the risk map and report waste points.</p>
     <form method="post">
       {{ form.hidden_tag() }}
       {% for field in [form.name, form.email, form.password, form.confirm] %}

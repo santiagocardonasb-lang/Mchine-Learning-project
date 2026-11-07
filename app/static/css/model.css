@@ -1,4 +1,4 @@
-/* Model and CRISP-DM pages (Part 2). Uses the tokens from tokens.css. */
+/* Model page (Part 2). Uses the tokens from tokens.css. */
 .head-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .head-actions form { margin: 0; }
 .head-actions .btn:disabled { opacity: .6; cursor: progress; }
@@ -29,20 +29,13 @@
 .bars .fill { height: 100%; background: var(--brand); border-radius: 4px; opacity: .85; }
 .balance { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
 
-.phases { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-bottom: 18px; }
-.phase { padding: 22px; display: flex; flex-direction: column; gap: 12px; }
-.phase-head { display: flex; gap: 12px; align-items: center; }
-.phase-head h3 { margin: 0; font-size: 16px; letter-spacing: -.02em; }
-.phase-num { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--brand-soft); color: var(--brand); font-size: 18px; flex-shrink: 0; }
-.assumptions { margin: 0; padding-left: 20px; color: var(--fg-muted); line-height: 1.65; display: flex; flex-direction: column; gap: 6px; }
 .link { color: var(--brand); font-weight: 700; }
 
 @media (max-width: 900px) {
   .model-grid { grid-template-columns: 1fr; }
-  .phases { grid-template-columns: 1fr 1fr; }
   .bars .bar { grid-template-columns: 130px 1fr 36px; }
 }
 
 @media (max-width: 560px) {
-  .phases, .params { grid-template-columns: 1fr; }
+  .params { grid-template-columns: 1fr; }
 }

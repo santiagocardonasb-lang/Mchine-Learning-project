@@ -1,14 +1,16 @@
 from urllib.parse import urlsplit
 
 from flask import flash, redirect, render_template, request, url_for
+from flask_login import login_required
 
-from app.blueprints.model import content, model_bp
+from app.blueprints.model import model_bp
 from app.services import training_service
 from app.utils.decorators import role_required
 from ml import config as ml_config
 
 
 @model_bp.route("/model")
+@login_required
 def index():
     run = training_service.active_run()
     return render_template(
@@ -24,7 +26,7 @@ def index():
 
 @model_bp.route("/crisp-dm")
 def crisp_dm():
-    return render_template("model/crisp_dm.html", content=content, run=training_service.active_run())
+    return redirect(url_for("main.home", _anchor="phases"))
 
 
 @model_bp.post("/model/retrain")

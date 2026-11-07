@@ -31,6 +31,8 @@ def make_admin():
 
 
 def test_model_page_without_run(client, db_session):
+    auth_service.register("Ana", "ana@mail.com", "secret123")
+    login(client, "ana@mail.com")
     html = client.get("/model").get_data(as_text=True)
 
     assert "Metrics appear after the first model run" in html
@@ -39,6 +41,8 @@ def test_model_page_without_run(client, db_session):
 
 def test_model_page_shows_params_metrics_and_baseline(seeded, client):
     training_service.run("cli")
+    auth_service.register("Ana", "ana@mail.com", "secret123")
+    login(client, "ana@mail.com")
     html = client.get("/model").get_data(as_text=True)
 
     assert "Baseline (most frequent)" in html
@@ -78,12 +82,13 @@ def test_retrain_ignores_external_next(seeded, client):
     assert response.headers["Location"] == "/model"
 
 
-def test_crisp_dm_page(client, db_session):
-    html = client.get("/crisp-dm").get_data(as_text=True)
-
-    assert "Business understanding" in html and "Deployment" in html
-    assert "Synthetic history" in html
-
-
 def test_nav_links_to_model(client, db_session):
-    assert 'href="/model"' in client.get("/").get_data(as_text=True)
+    auth_service.register("Ana", "ana@mail.com", "secret123")
+    login(client, "ana@mail.com")
+    assert 'href="/model"' in client.get("/app").get_data(as_text=True)
+
+
+def test_model_page_links_to_crisp_dm_phases(client, db_session):
+    auth_service.register("Ana", "ana@mail.com", "secret123")
+    login(client, "ana@mail.com")
+    assert 'href="/#phases"' in client.get("/model").get_data(as_text=True)

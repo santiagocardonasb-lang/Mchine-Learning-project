@@ -155,8 +155,8 @@ def test_public_dict_has_no_user_fields(zones, user):
     assert data["reported_at"].startswith(str(report.reported_at.year))
 
 
-def test_map_is_public(client, db_session):
-    response = client.get("/map")
+def test_map_renders_for_logged_in_user(logged_in):
+    response = logged_in.get("/map")
 
     assert response.status_code == 200
     html = response.get_data(as_text=True)
