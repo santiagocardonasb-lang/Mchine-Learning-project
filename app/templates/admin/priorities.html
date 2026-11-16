@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Collection priorities · LocWaste{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/results.css') }}">
+{% endblock %}
+
+{% block content %}
+{% set badge = {"pending": "open", "scheduled": "in_progress", "done": "closed", "dismissed": "rejected"} %}
+<div class="page">
+  <h1>Collection priorities</h1>
+  <p class="sub">Every training run turns its high-risk UPZ into a pending task. Schedule a collection date, mark it done (optionally closing the zone's open citizen reports) or dismiss it with a note.</p>
+
+  <div class="admin-stats">
+    {% for s in statuses %}
+      <a class="card admin-stat {{ 'on' if status == s }}" href="{{ url_for('admin.priorities', status=s) }}">
+        <span class="label">{{ s }}</span><b>{{ counts[s] }}</b>
+      </a>
+    {% endfor %}
+  </div>
+
+  <h2 id="tasks">Tasks</h2>
+  <div class="card table-card">
+    <div class="filter-row">
+      <a class="chip-link {{ 'on' if not status }}" href="{{ url_for('admin.priorities') }}">All</a>
+      {% for s in statuses %}
+        <a class="chip-link {{ 'on' if status == s }}" href="{{ url_for('admin.priorities', status=s) }}">{{ s }}</a>
+      {% endfor %}
+    </div>
+    {% if tasks.items %}
+      <table class="data">
+        <tr><th>Zone</th><th>Period</th><th>Risk</th><th>Status</th><th>Notes</th><th>Action</th></tr>
+        {% for t in tasks.items %}
+          <tr>
+            <td>{{ t.upz.name }}<small>{{ t.upz.locality.name }}</small></td>
+            <td>{{ t.period.strftime("%B %Y") }}<small>run {{ t.model_run_id }}</small></td>
+            <td><span class="pill {{ t.level }}">{{ t.level | capitalize }} · {{ (t.probability * 100) | round | int }}%</span></td>
+            <td><span class="status {{ badge[t.status] }}">{{ t.status }}</span>
+              {% if t.scheduled_for %}<small>for {{ t.scheduled_for.strftime("%b %d, %Y") }}</small>{% endif %}
+              {% if t.updated_by %}<small>by {{ t.updated_by.name }}</small>{% endif %}</td>
+            <td class="note-cell">{{ t.notes or "" }}</td>
+            <td>
+              {% if t.is_open %}
+                <form class="status-form task-form" method="post" action="{{ url_for('admin.priority_update', task_id=t.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="filter" value="{{ status or '' }}">
+                  <input type="hidden" name="page" value="{{ tasks.page }}">
+                  <input type="date" name="scheduled_for" value="{{ t.scheduled_for.isoformat() if t.scheduled_for else '' }}" aria-label="Collection date for {{ t.upz.name }}">
+                  <input type="text" name="note" maxlength="2000" placeholder="Note" aria-label="Note for {{ t.upz.name }}">
+                  {% if open_reports.get(t.upz_id) %}
+                    <label class="task-check"><input type="checkbox" name="close_reports" value="1">Close its {{ open_reports[t.upz_id] }} open report{{ "s" if open_reports[t.upz_id] != 1 }} when done</label>
+                  {% endif %}
+                  <button class="btn btn-soft" type="submit" name="action" value="schedule">Schedule</button>
+                  <button class="btn btn-soft" type="submit" name="action" value="done">Done</button>
+                  <button class="btn btn-ghost" type="submit" name="action" value="dismiss">Dismiss</button>
+                </form>
+              {% else %}
+                <small>Closed {{ t.updated_at.strftime("%Y-%m-%d") }}</small>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </table>
+      {% if tasks.pages > 1 %}
+        <div class="pager">
+          {% if tasks.has_prev %}<a class="btn btn-ghost" href="{{ url_for('admin.priorities', status=status, page=tasks.prev_num) }}"><i class="bi bi-arrow-left"></i>Previous</a>{% endif %}
+          <span>Page {{ tasks.page }} of {{ tasks.pages }}</span>
+          {% if tasks.has_next %}<a class="btn btn-ghost" href="{{ url_for('admin.priorities', status=status, page=tasks.next_num) }}">Next<i class="bi bi-arrow-right"></i></a>{% endif %}
+        </div>
+      {% endif %}
+    {% else %}
+      <p class="empty-row">No collection priorities{{ " with this status" if status }}. They appear after a training run predicts high-risk zones.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,7 +1,7 @@
 from urllib.parse import urlsplit
 
 from flask import flash, redirect, render_template, request, url_for
-from flask_login import login_required
+from flask_login import current_user, login_required
 
 from app.blueprints.model import model_bp
 from app.services import training_service
@@ -32,7 +32,7 @@ def crisp_dm():
 @model_bp.post("/model/retrain")
 @role_required("admin")
 def retrain():
-    if training_service.start("manual"):
+    if training_service.start("manual", current_user.id):
         flash("Training started. Refresh this page in a minute to see the new run.", "success")
     else:
         flash("A training run is already in progress.", "error")

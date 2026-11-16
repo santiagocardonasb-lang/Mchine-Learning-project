@@ -72,8 +72,12 @@ table.data th { font-size: 11px; letter-spacing: .06em; text-transform: uppercas
 table.data td small { display: block; color: var(--fg-faint); }
 table.data .note-cell { max-width: 260px; color: var(--fg-muted); }
 .status-form { display: flex; gap: 6px; margin: 0; }
-.status-form select { border: 1px solid var(--line); background: var(--surface); color: var(--fg); border-radius: 9px; padding: 7px 8px; font: inherit; font-size: 13px; }
+.status-form select, .status-form input[type=date], .status-form input[type=text] { border: 1px solid var(--line); background: var(--surface); color: var(--fg); border-radius: 9px; padding: 7px 8px; font: inherit; font-size: 13px; }
 .status-form .btn { padding: 7px 12px; }
+.task-form { flex-wrap: wrap; min-width: 300px; max-width: 360px; }
+.task-form input[type=text] { flex: 1; min-width: 120px; }
+.task-check { display: flex; align-items: center; gap: 6px; width: 100%; font-size: 13px; color: var(--fg-muted); }
+.task-check input { accent-color: var(--brand); }
 .pager { display: flex; gap: 12px; align-items: center; justify-content: center; margin-top: 14px; color: var(--fg-muted); font-size: 14px; }
 .empty-row { margin: 8px 0; color: var(--fg-muted); }
 .model-row { display: flex; justify-content: space-between; gap: 16px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }

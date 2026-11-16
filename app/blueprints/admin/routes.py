@@ -4,7 +4,7 @@ from flask_login import current_user
 from app.blueprints.admin import admin_bp
 from app.models import STATUSES
 from app.models.user import ROLES
-from app.services import admin_service, training_service
+from app.services import admin_service, collection_service, training_service
 from app.utils.decorators import role_required
 from ml import config as ml_config
 
@@ -20,6 +20,7 @@ def index():
         since_last_run=training_service.reports_since_last_run(),
         threshold=ml_config.AUTO_RETRAIN_THRESHOLD,
         running=training_service.is_running(),
+        pending_tasks=collection_service.pending_count(),
     )
 
 

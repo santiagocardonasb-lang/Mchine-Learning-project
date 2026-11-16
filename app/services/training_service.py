@@ -1,17 +1,24 @@
 
 import io
 import threading
+import time
+from collections.abc import Callable
 
 import joblib
 import pandas as pd
 from flask import Flask, current_app
+from sqlalchemy.orm import defer
 
 from app.extensions import db
-from app.models import Locality, ModelRun, Report, RiskPrediction, Upz
+from app.models import InferenceLog, Locality, ModelRun, Report, RiskPrediction, Upz
 from app.models.user import utcnow
+from app.services import collection_service
 from ml import config as ml_config
 from ml.features import REPORT_COLUMNS, build_panel, zone_table
 from ml.train import NotEnoughData, train
+
+# Called with each new run after it is committed; Monitoring appends its event clean-up.
+on_trained: list[Callable[[ModelRun], None]] = []
 
 # One training at a time per process; a second request while one runs is skipped.
 _lock = threading.Lock()
@@ -41,8 +48,12 @@ def zones_frame() -> pd.DataFrame:
     return zone_table(zones, localities)
 
 
-def run(trigger: str) -> ModelRun:
-    """Train on every non-rejected report, store the run and make it the active one."""
+def run(trigger: str, user_id: int | None = None) -> ModelRun:
+    """Train on every non-rejected report, store the run and make it the active one.
+
+    user_id is the admin who asked for the run; None for automatic and command-line runs.
+    """
+    started = time.perf_counter()
     result = train(build_panel(reports_frame(), zones_frame()))
 
     buffer = io.BytesIO()
@@ -52,21 +63,37 @@ def run(trigger: str) -> ModelRun:
     db.session.add(run)
 
     upz_ids = dict(db.session.query(Upz.code, Upz.id).all())
-    for row in result.predictions.itertuples(index=False):
-        db.session.add(RiskPrediction(model_run=run, upz_id=upz_ids[row.upz_code], period=row.period,
-                                      level=row.level, probability=float(row.probability)))
+    predictions = [
+        RiskPrediction(model_run=run, upz_id=upz_ids[row.upz_code], period=row.period,
+                       level=row.level, probability=float(row.probability))
+        for row in result.predictions.itertuples(index=False)
+    ]
+    db.session.add_all(predictions)
+    collection_service.create_tasks(run, predictions)
+    # The batch prediction is part of training, so its duration is the whole run's.
+    db.session.add(InferenceLog(user_id=user_id, model_run=run, kind="batch",
+                                duration_ms=(time.perf_counter() - started) * 1000))
 
     # Old artifacts are dropped to save space; their params and metrics stay for the run history.
     db.session.flush()
     ModelRun.query.filter(ModelRun.id != run.id).update({"is_active": False, "artifact": None})
     run.is_active = True
     db.session.commit()
+    # The run is already saved; a failing hook must not turn it into a failed training.
+    for hook in on_trained:
+        try:
+            hook(run)
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("on_trained hook %r failed for run %s", hook, run.id)
     return run
 
 
 def active_run() -> ModelRun | None:
     # Latest first: two concurrent runs in different processes can both end up active.
-    return ModelRun.query.filter_by(is_active=True).order_by(ModelRun.trained_at.desc()).first()
+    # The artifact can be megabytes and most callers only need the metrics, so it loads on access.
+    return (ModelRun.query.options(defer(ModelRun.artifact)).filter_by(is_active=True)
+            .order_by(ModelRun.trained_at.desc()).first())
 
 
 def recent_runs(limit: int = 10) -> list[ModelRun]:
@@ -88,12 +115,12 @@ def is_running() -> bool:
     return _lock.locked()
 
 
-def _run_locked(app: Flask, trigger: str) -> None:
+def _run_locked(app: Flask, trigger: str, user_id: int | None) -> None:
     global _last_attempt
     _last_attempt = utcnow()
     with app.app_context():
         try:
-            run(trigger)
+            run(trigger, user_id)
         except NotEnoughData as error:
             app.logger.warning("Training skipped: %s", error)
         except Exception:
@@ -104,15 +131,15 @@ def _run_locked(app: Flask, trigger: str) -> None:
             _lock.release()
 
 
-def start(trigger: str) -> bool:
+def start(trigger: str, user_id: int | None = None) -> bool:
     """Train in a background thread so the request returns at once. False if one is running."""
     if not _lock.acquire(blocking=False):
         return False
     app = current_app._get_current_object()
     if app.config.get("TRAIN_IN_BACKGROUND", True):
-        threading.Thread(target=_run_locked, args=(app, trigger), daemon=True).start()
+        threading.Thread(target=_run_locked, args=(app, trigger, user_id), daemon=True).start()
     else:
-        _run_locked(app, trigger)
+        _run_locked(app, trigger, user_id)
     return True
 
 

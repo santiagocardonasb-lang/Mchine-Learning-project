@@ -1,9 +1,9 @@
 from flask import redirect, render_template, url_for
-from flask_login import login_required
+from flask_login import current_user, login_required
 
 from app import content
 from app.blueprints.main import main_bp
-from app.services import risk_service, stats_service, training_service
+from app.services import collection_service, risk_service, stats_service, training_service
 
 
 @main_bp.route("/")
@@ -25,6 +25,7 @@ def app_home():
         reports_this_month=stats_service.reports_this_month(),
         priority_zones=stats_service.top_priority_zones(),
         city=risk_service.city_stats(),
+        pending_tasks=collection_service.pending_count() if current_user.is_admin else None,
     )
 
 
