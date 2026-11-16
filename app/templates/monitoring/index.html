@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}Monitoring · LocWaste{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/model.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/results.css') }}">
+{% endblock %}
+
+{% macro ms(value) %}{{ "{:,}".format(value | round | int) ~ " ms" if value is not none else "—" }}{% endmacro %}
+{% macro flag(on) %}<span class="pill {{ 'high' if on else 'low' }}">{{ "Flagged" if on else "OK" }}</span>{% endmacro %}
+
+{% block content %}
+{% set ind = data.indicators %}
+<div class="page">
+  <div class="section-head">
+    <div>
+      <h1>Monitoring</h1>
+      <p class="sub">How the system and the model behave in use: traffic, latency and errors over the last {{ ind.days }} days, predictions against what actually happened, and drift.</p>
+    </div>
+  </div>
+
+  {% if data.retrain_reasons %}
+    <div class="card table-card model-row">
+      <div>
+        <span class="pill high"><span class="dot"></span>Retraining recommended</span>
+        {% for reason in data.retrain_reasons %}<p class="note">{{ reason }}</p>{% endfor %}
+      </div>
+      <form method="post" action="{{ url_for('model.retrain') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="next" value="{{ url_for('monitoring.index') }}">
+        <button class="btn btn-brand" type="submit" {{ "disabled" if running }}><i class="bi bi-arrow-repeat"></i>{{ "Training…" if running else "Retrain now" }}</button>
+      </form>
+    </div>
+  {% endif %}
+
+  <div class="admin-stats">
+    <div class="card admin-stat"><span class="label">Requests · {{ ind.days }} days</span><b>{{ "{:,}".format(ind.requests[0]) }}</b><small>avg {{ ms(ind.requests[1]) }}</small></div>
+    <div class="card admin-stat"><span class="label">Risk checks · {{ ind.days }} days</span><b>{{ "{:,}".format(ind.inferences[0]) }}</b><small>avg {{ ms(ind.inferences[1]) }}</small></div>
+    <div class="card admin-stat"><span class="label">Errors · {{ ind.days }} days</span><b class="{{ 'high-ink' if ind.errors }}">{{ ind.errors }}</b></div>
+    <div class="card admin-stat"><span class="label">Active model</span>
+      {% if ind.model %}<b>Run {{ ind.model.id }}</b><small>{{ ind.model.name }} · {{ ind.model.age_days }} day{{ "s" if ind.model.age_days != 1 }} old</small>
+      {% else %}<b>—</b><small>Not trained yet</small>{% endif %}</div>
+  </div>
+
+  <h2>Latest errors</h2>
+  <div class="card table-card">
+    {% if ind.latest_errors %}
+      <table class="data">
+        <tr><th>When</th><th>Request</th><th>Message</th></tr>
+        {% for e in ind.latest_errors %}
+          <tr><td>{{ e.created_at.strftime("%Y-%m-%d %H:%M") }}</td><td>{{ e.method }} {{ e.path }}</td><td class="note-cell">{{ e.message }}</td></tr>
+        {% endfor %}
+      </table>
+    {% else %}
+      <p class="empty-row">No errors recorded.</p>
+    {% endif %}
+  </div>
+
+  <h2>Predictions vs actual outcomes</h2>
+  {% if data.outcomes %}
+    <div class="model-grid">
+      {% for o in data.outcomes %}
+        <div class="card">
+          <h3>{{ o.period.strftime("%B %Y") }} · run {{ o.run_id }}</h3>
+          {% if o.macro_f1 is defined %}
+            <div class="params">
+              <div class="param"><code>Accuracy</code><b>{{ "%.2f" | format(o.accuracy) }}</b></div>
+              <div class="param"><code>Macro F1</code><b>{{ "%.2f" | format(o.macro_f1) }}</b></div>
+              <div class="param"><code>Recall high</code><b>{{ "%.2f" | format(o.recall_high) }}</b></div>
+              <div class="param"><code>Zones compared</code><b>{{ o.zones }}</b></div>
+            </div>
+            <div class="cm" style="margin-top: 14px">
+              <div class="h"></div>
+              {% for level in levels %}<div class="h">Pred {{ level }}</div>{% endfor %}
+              {% for row in o.confusion_matrix %}
+                {% set i = loop.index0 %}
+                <div class="h">{{ levels[i] }}</div>
+                {% for value in row %}<div class="{{ levels[i] if loop.index0 == i }}">{{ value }}</div>{% endfor %}
+              {% endfor %}
+            </div>
+            <p class="hint-text">Rows are the actual level, computed from that month's reports with the run's own cut points.</p>
+          {% else %}
+            <p class="note">{{ o.note }}</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="card empty"><i class="bi bi-hourglass-split"></i>No predicted month is complete yet. Each prediction is compared here once its month ends.</div>
+  {% endif %}
+
+  <h2>Drift and performance checks</h2>
+  <div class="model-grid">
+    <div class="card">
+      <h3>Report rate · population stability index</h3>
+      {% set d = data.drift %}
+      {% if d %}
+        <p class="note">{{ d.month.strftime("%B %Y") }} against the training months {{ d.train_from.strftime("%b %Y") }} to {{ d.train_to.strftime("%b %Y") }}: PSI <b>{{ "%.3f" | format(d.psi) }}</b> (threshold {{ data.thresholds.psi }}) {{ flag(d.psi_flag) }}</p>
+        <p class="hint-text">Distribution of reports per 10,000 inhabitants across UPZ. Below 0.1 is stable; above {{ data.thresholds.psi }} the zones report at clearly different rates than the model learned from.</p>
+      {% else %}
+        <p class="note">Needs an active model and reports from the last complete month.</p>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <h3>Model performance</h3>
+      {% set p = data.performance %}
+      {% if p %}
+        <p class="note">Live macro F1 in {{ p.period.strftime("%B %Y") }} is <b>{{ "%.2f" | format(p.live) }}</b> against a cross-validation macro F1 of {{ "%.2f" | format(p.reference) }}; the alarm is below {{ "%.2f" | format(p.floor) }} ({{ (data.thresholds.performance * 100) | round | int }}%). {{ flag(p.flag) }}</p>
+      {% else %}
+        <p class="note">Appears once a predicted month is complete and has reports.</p>
+      {% endif %}
+    </div>
+
+    {% if d %}
+      <div class="card wide">
+        <h3>Report mix · training months vs {{ d.month.strftime("%B %Y") }} {{ flag(d.share_flag) }}</h3>
+        <table>
+          <tr><th>Group</th><th>Category</th><th>Training share</th><th>Last month</th><th>Change</th></tr>
+          {% for group, rows in d.shares.items() %}
+            {% for row in rows %}
+              <tr><td>{{ group | replace("_", " ") if loop.first }}</td><td>{{ row.category | replace("_", " ") }}</td>
+                <td>{{ "%.1f%%" | format(row.train * 100) }}</td><td>{{ "%.1f%%" | format(row.recent * 100) }}</td>
+                <td class="{{ 'high-ink' if row.change | abs > data.thresholds.share }}">{{ "%+.1f" | format((row.change * 100) | round(1) + 0) }} pts</td></tr>
+            {% endfor %}
+          {% endfor %}
+        </table>
+        <p class="hint-text">A change above {{ (data.thresholds.share * 100) | round | int }} percentage points in any category is flagged.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

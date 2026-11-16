@@ -1,8 +1,9 @@
 import os
+import time
 from urllib.parse import urlsplit
 
 from dotenv import load_dotenv
-from flask import Flask, flash, redirect, request, url_for
+from flask import Flask, flash, g, redirect, render_template, request, url_for
 from flask_wtf.csrf import CSRFError
 
 from app.extensions import csrf, db, login_manager, migrate
@@ -47,10 +48,11 @@ def create_app(config_name: str | None = None) -> Flask:
     from app.blueprints.main import main_bp
     from app.blueprints.map import map_bp
     from app.blueprints.model import model_bp
+    from app.blueprints.monitoring import monitoring_bp
     from app.blueprints.reports import reports_bp
     from app.commands import register_commands
     from app.ml_commands import register_ml_commands
-    from app.services import report_service, training_service
+    from app.services import monitoring_service, report_service, training_service
 
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp)
@@ -59,12 +61,15 @@ def create_app(config_name: str | None = None) -> Flask:
     app.register_blueprint(reports_bp)
     app.register_blueprint(model_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(monitoring_bp)
 
     register_commands(app)
     register_ml_commands(app)
 
     if training_service.maybe_retrain not in report_service.on_created:
         report_service.on_created.append(training_service.maybe_retrain)
+    if monitoring_service.prune_after_training not in training_service.on_trained:
+        training_service.on_trained.append(monitoring_service.prune_after_training)
 
     @app.errorhandler(CSRFError)
     def csrf_expired(error: CSRFError):
@@ -73,5 +78,20 @@ def create_app(config_name: str | None = None) -> Flask:
         if referrer and urlsplit(referrer).netloc == request.host:
             return redirect(referrer)
         return redirect(url_for("main.home"))
+
+    @app.before_request
+    def start_timer():
+        g.request_started = time.perf_counter()
+
+    @app.after_request
+    def record_request(response):
+        monitoring_service.record_request(response)
+        return response
+
+    @app.errorhandler(500)
+    def server_error(error):
+        db.session.rollback()
+        monitoring_service.record_error(getattr(error, "original_exception", None) or error)
+        return render_template("errors/500.html"), 500
 
     return app

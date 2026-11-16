@@ -1,4 +1,5 @@
 import csv
+from datetime import datetime, timezone
 from pathlib import Path
 
 import click
@@ -44,6 +45,14 @@ def load_zones() -> tuple[int, int]:
 
 
 def register_commands(app: Flask) -> None:
+    @app.cli.command("prune-events")
+    def prune_events_command():
+        """Delete monitoring events older than APP_EVENT_RETENTION_DAYS (also runs after each training)."""
+        from app.services import monitoring_service
+
+        deleted = monitoring_service.prune_events(datetime.now(timezone.utc))
+        click.echo(f"Deleted {deleted} monitoring events.")
+
     @app.cli.command("load-zones")
     def load_zones_command():
         """Load localities and UPZ from data/zone_stats.csv and the population CSV."""
