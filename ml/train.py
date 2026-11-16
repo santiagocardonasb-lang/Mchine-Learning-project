@@ -13,7 +13,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
 from ml import config
-from ml.features import NotEnoughData, label, tercile_cuts
+from ml.features import NotEnoughData, label, latest_month, tercile_cuts
 
 LEVELS = list(config.RISK_LEVELS)
 MODEL_NAMES = {"baseline": "Baseline (most frequent)",
@@ -133,7 +133,7 @@ def train(panel: pd.DataFrame) -> TrainResult:
     y, cuts = labelled(rows, months)
     model = make_models()[chosen].fit(rows[config.FEATURES], y)
 
-    latest = panel[panel["month"] == panel["month"].max()]
+    latest = latest_month(panel)
     probabilities = model.predict_proba(latest[config.FEATURES])
     classes = list(model.classes_)
     period = (latest["month"].iloc[0] + pd.offsets.MonthBegin(1)).date()

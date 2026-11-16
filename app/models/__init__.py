@@ -1,9 +1,14 @@
 from app.models.model_run import ModelRun, RiskPrediction
+from app.models.operations import AppEvent, CollectionTask, Feedback, InferenceLog
 from app.models.report import SIZES, SOURCES, STATUSES, WASTE_TYPES, Report
 from app.models.user import User
 from app.models.zone import Locality, Upz
 
 __all__ = [
+    "AppEvent",
+    "CollectionTask",
+    "Feedback",
+    "InferenceLog",
     "Locality",
     "ModelRun",
     "Report",

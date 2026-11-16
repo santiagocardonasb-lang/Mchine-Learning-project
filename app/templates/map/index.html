@@ -94,6 +94,7 @@
     </div>
 
     <a class="btn btn-brand" id="detailReport" href="{{ url_for('reports.new') }}"><i class="bi bi-geo-alt-fill"></i>Report here</a>
+    <a class="btn btn-soft" id="detailCheck" href="{{ url_for('model.risk_check') }}"><i class="bi bi-activity"></i>Check risk now</a>
   </div>
 
   <div class="card legend">
@@ -112,6 +113,7 @@
 <script>
 (function () {
   const reportUrl = "{{ url_for('reports.new') }}";
+  const checkUrl = "{{ url_for('model.risk_check') }}";
   const detail = document.getElementById('detail');
 
   // The summary card covers the left 340px on wide screens, so fits leave room for it.
@@ -130,6 +132,7 @@
       document.getElementById('detailLocality').textContent = localityNames[feature.properties.locality_code] || '';
       const point = new URLSearchParams({lat: latlng.lat.toFixed(6), lon: latlng.lng.toFixed(6)});
       document.getElementById('detailReport').href = reportUrl + '?' + point;
+      document.getElementById('detailCheck').href = checkUrl + '?' + new URLSearchParams({upz: feature.properties.code});
       detail.classList.add('open');
     },
   });

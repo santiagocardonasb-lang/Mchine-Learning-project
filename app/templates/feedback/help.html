@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Help & feedback · LocWaste{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/model.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/results.css') }}">
+{% endblock %}
+
+{% set icons = {"incident": "bi-exclamation-octagon", "bug": "bi-bug", "suggestion": "bi-lightbulb"} %}
+{% set badge = {"open": "open", "in_review": "in_progress", "resolved": "closed"} %}
+
+{% block content %}
+<div class="page">
+  <h1>Help & feedback</h1>
+  <p class="sub">Tell us when something goes wrong or could work better. An administrator reviews every ticket and answers here.</p>
+
+  <div class="model-grid">
+    <form class="card form" method="post" action="{{ url_for('main.help_feedback') }}" novalidate>
+      {{ form.hidden_tag() }}
+      <div>
+        <span class="label">{{ form.kind.label.text }}</span>
+        <div class="choices">
+          {% for option in form.kind %}
+            <label class="choice">{{ option() }}<i class="bi {{ icons[option.data] }}"></i>{{ option.label.text }}</label>
+          {% endfor %}
+        </div>
+        {% for error in form.kind.errors %}<p class="error">{{ error }}</p>{% endfor %}
+      </div>
+      <div>
+        {{ form.message(class_="input", rows=5, maxlength=2000, placeholder="What happened, or what would help?", **{"aria-label": "Message"}) }}
+        {% for error in form.message.errors %}<p class="error">{{ error }}</p>{% endfor %}
+      </div>
+      {% if form.page.data %}<p class="hint-text">Sent from {{ form.page.data }}</p>{% endif %}
+      <button class="btn btn-brand send" type="submit"><i class="bi bi-send"></i>Send ticket</button>
+    </form>
+
+    <div class="card">
+      <h3>How tickets are handled</h3>
+      <p class="note"><b>Incident</b>: the app or a page stopped working, or data looks wrong (a report in the wrong zone, a risk that makes no sense).</p>
+      <p class="note"><b>Bug</b>: something works but behaves unexpectedly.</p>
+      <p class="note"><b>Suggestion</b>: an idea to make LocWaste more useful.</p>
+      <p class="note">Every ticket starts <b>open</b>. An administrator moves it to <b>in review</b> while looking into it and to <b>resolved</b> with an answer, which you see below.</p>
+    </div>
+  </div>
+
+  <h2 id="tickets">My tickets</h2>
+  <div class="card table-card">
+    {% if tickets %}
+      <table class="data">
+        <tr><th>Sent</th><th>Kind</th><th>Message</th><th>Status</th><th>Answer</th></tr>
+        {% for t in tickets %}
+          <tr>
+            <td>{{ t.created_at.strftime("%Y-%m-%d %H:%M") }}<small>{{ t.page or "" }}</small></td>
+            <td>{{ t.kind }}</td>
+            <td class="note-cell">{{ t.message }}</td>
+            <td><span class="status {{ badge[t.status] }}">{{ t.status | replace("_", " ") }}</span></td>
+            <td class="note-cell">{{ t.response or "—" }}</td>
+          </tr>
+        {% endfor %}
+      </table>
+    {% else %}
+      <p class="empty-row">You haven't sent any ticket yet.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

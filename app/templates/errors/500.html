@@ -1,0 +1,23 @@
+<!doctype html>
+{# Standalone on purpose: no base template, menu or current_user, since the database may be what failed. #}
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Something went wrong · LocWaste</title>
+  <script>
+    try { if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark'); } catch (e) {}
+  </script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body>
+  <main class="auth">
+    <div class="card">
+      <h1>Something went wrong</h1>
+      <p class="note">The error was recorded and an administrator will look into it. Please try again in a moment.</p>
+      <a class="btn btn-brand" href="{{ url_for('main.app_home') }}">Back to the app</a>
+    </div>
+  </main>
+</body>
+</html>

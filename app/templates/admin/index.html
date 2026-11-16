@@ -11,6 +11,12 @@
   <h1>Admin</h1>
   <p class="sub">Manage roles and retrain the model. Citizen reports are moderated in <a class="link" href="{{ url_for('admin.reports') }}">All reports</a>.</p>
 
+  <div class="admin-stats">
+    <a class="card admin-stat" href="{{ url_for('admin.priorities', status='pending') }}">
+      <span class="label">Pending collection priorities</span><b class="{{ 'high-ink' if pending_tasks }}">{{ pending_tasks }}</b>
+    </a>
+  </div>
+
   <h2 id="model">Model</h2>
   <div class="card table-card">
     <div class="model-row">

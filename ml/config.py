@@ -32,6 +32,14 @@ MIN_SAMPLES_LEAF = 5
 # Retraining
 AUTO_RETRAIN_THRESHOLD = 50
 
+# Monitoring
+MONITORING_DAYS = 7
+PSI_BINS = 10
+DRIFT_PSI_THRESHOLD = 0.2  # population stability index: above 0.2 is a significant shift
+DRIFT_SHARE_THRESHOLD = 0.10  # largest change in the share of a waste type, size or vectors
+PERFORMANCE_DROP_FRACTION = 0.8  # live macro F1 below this fraction of the CV macro F1
+APP_EVENT_RETENTION_DAYS = 30
+
 FEATURES = [
     "reports",
     "rate",

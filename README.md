@@ -30,6 +30,45 @@ Run the tests with `pytest`.
 | `flask --app wsgi create-admin --email <email> --name <name>` | Creates an admin, or promotes an existing user and resets the password |
 | `python scripts/prepare_geo.py` | Rebuilds the GeoJSON files and `data/zone_stats.csv` from the open data in `data/raw/` |
 
+## Using the model in operations
+
+See `docs/superpowers/specs/2026-11-15-operations-design.md` for the decisions behind these pages.
+
+- **Risk check** (`/risk-check`, any signed-in user): pick a UPZ, or press "Check risk now" on the
+  map's zone card or "Check this zone's risk" in My reports. The active model predicts next
+  month's level and class probabilities from that zone's stored reports, with the same features
+  as training, and the page explains the result, how to use it and its limitations.
+- **Inference history** (`/inferences`): every prediction with its user, model run, zone, result,
+  duration and status. Users see their own risk checks; admins see all of them plus the batch
+  prediction of each training run.
+- **Collection priorities** (`/admin/priorities`, admins): each training run creates a pending
+  task for every high-risk UPZ that has no task yet for that month (done or dismissed ones
+  are not reopened by a later run). A pending task stays open if a retrain in the same month
+  no longer rates its UPZ as high risk; review or dismiss it by hand. Schedule a collection date,
+  mark it done (optionally closing the zone's open citizen reports) or dismiss it with a note. The
+  pending count is shown on the app home and the Admin page.
+- **Monitoring** (`/admin/monitoring`, admins): requests and average response time, risk checks
+  and their latency, errors and the active model's age over the last 7 days; accuracy, macro F1
+  and confusion matrix of every predicted month that is complete; a drift check (PSI of the
+  report rate and the shift in waste type, size and vector shares) and a performance check (live
+  macro F1 against the cross-validation score). Thresholds live in `ml/config.py`
+  (`DRIFT_PSI_THRESHOLD`, `DRIFT_SHARE_THRESHOLD`, `PERFORMANCE_DROP_FRACTION`); any flag shows a
+  retraining recommendation with a "Retrain now" button.
+
+Every app request (static files excluded) and every unhandled error is stored in `app_events`;
+an error shows a friendly page instead of a stack trace.
+
+## Help and feedback procedure
+
+1. Any signed-in user opens **Help & feedback** (the question mark in the menu). The page they
+   came from is attached to the ticket.
+2. They choose the kind — **incident** (something stopped working or data looks wrong), **bug**
+   (unexpected behaviour) or **suggestion** — describe it and send it. The ticket starts **open**
+   and appears under "My tickets".
+3. An admin reviews it in **Admin → Feedback**, sets it to **in review** while working on it and
+   to **resolved** with an answer.
+4. The user sees the status and the answer under "My tickets".
+
 ## Environment variables
 
 | Variable | Local | Production (Render) |

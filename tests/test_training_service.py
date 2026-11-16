@@ -8,7 +8,7 @@ import pytest
 
 from app import ml_commands
 from app.extensions import db
-from app.models import ModelRun, Report, RiskPrediction, Upz
+from app.models import CollectionTask, InferenceLog, ModelRun, Report, RiskPrediction, Upz
 from app.services import auth_service, report_service, risk_service, training_service
 from ml import config
 
@@ -120,7 +120,7 @@ def test_failed_retrain_waits_for_another_threshold(seeded, monkeypatch):
     monkeypatch.setattr(training_service, "_last_attempt", None)
     attempts = []
 
-    def failing_run(trigger):
+    def failing_run(trigger, user_id=None):
         attempts.append(trigger)
         raise RuntimeError("boom")
 
@@ -166,3 +166,50 @@ def test_rejected_reports_do_not_count_toward_retrain(seeded):
     report.status = "rejected"
     db.session.commit()
     assert training_service.reports_since_last_run() == 0
+
+
+def test_run_logs_a_batch_inference_with_the_triggering_user(seeded):
+    admin = auth_service.register("Boss", "boss@mail.com", "secret123")
+    run = training_service.run("manual", admin.id)
+    cli_run = training_service.run("cli")
+
+    logs = {log.model_run_id: log for log in InferenceLog.query.all()}
+    assert logs[run.id].kind == "batch" and logs[run.id].user_id == admin.id
+    assert logs[run.id].upz_id is None and logs[run.id].status == "ok" and logs[run.id].duration_ms > 0
+    assert logs[cli_run.id].user_id is None
+
+
+def test_admin_retrain_passes_the_admin_to_the_run(seeded, app):
+    admin = auth_service.register("Boss", "boss@mail.com", "secret123")
+    admin.role = "admin"
+    db.session.commit()
+    client = app.test_client()
+    client.post("/auth/login", data={"email": "boss@mail.com", "password": "secret123"})
+
+    client.post("/model/retrain")
+
+    assert InferenceLog.query.one().user_id == admin.id
+
+
+def test_run_creates_tasks_for_high_risk_zones_once_per_period(seeded):
+    first = training_service.run("cli")
+    high = {p.upz_id for p in RiskPrediction.query.filter_by(model_run_id=first.id, level="high")}
+
+    tasks = CollectionTask.query.all()
+    assert high and {t.upz_id for t in tasks} == high
+    assert all(t.status == "pending" and t.model_run_id == first.id for t in tasks)
+
+    training_service.run("cli")
+    assert CollectionTask.query.count() == len(high)
+
+
+def test_on_trained_hooks_get_the_run_and_cannot_fail_it(seeded, monkeypatch):
+    seen = []
+
+    def failing(run):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(training_service, "on_trained", [failing, seen.append])
+    run = training_service.run("cli")
+
+    assert seen == [run] and training_service.active_run().id == run.id

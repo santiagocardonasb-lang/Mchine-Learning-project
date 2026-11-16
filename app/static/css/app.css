@@ -9,9 +9,18 @@ button { font: inherit; }
 .brand i { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 9px; background: var(--brand-soft); color: var(--brand); font-size: 17px; }
 .nav-menu { flex: 1; display: flex; align-items: center; gap: 10px; }
 .links { display: flex; gap: 2px; }
-.links a { padding: 8px 13px; border-radius: 9px; color: var(--fg-muted); font-weight: 600; }
+.links a { white-space: nowrap; padding: 8px 13px; border-radius: 9px; color: var(--fg-muted); font-weight: 600; }
 .links a:hover { color: var(--fg); }
 .links a.active { color: var(--brand); background: var(--brand-soft); }
+.nav-drop { position: relative; }
+.nav-drop summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 8px 13px; border-radius: 9px; color: var(--fg-muted); font-weight: 600; }
+.nav-drop summary::-webkit-details-marker { display: none; }
+.nav-drop summary:hover { color: var(--fg); }
+.nav-drop summary.active { color: var(--brand); background: var(--brand-soft); }
+.nav-drop summary i { font-size: 11px; }
+.drop-menu { position: absolute; top: calc(100% + 10px); left: 0; min-width: 220px; padding: 6px; display: flex; flex-direction: column; gap: 2px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 12px 32px -12px rgb(var(--shadow) / .3); }
+a.icon-btn { display: grid; place-items: center; }
+a.icon-btn.active { color: var(--brand); border-color: var(--brand); }
 .account { margin-left: auto; display: flex; align-items: center; gap: 10px; }
 .account form { margin: 0; }
 .user-name { font-weight: 600; color: var(--fg-muted); }
@@ -27,7 +36,7 @@ button { font: inherit; }
 .label { font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--fg-faint); }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 1px 2px rgb(var(--shadow) / .04), 0 8px 24px -12px rgb(var(--shadow) / .10); }
 .input, select.input { width: 100%; padding: 11px 13px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); color: var(--fg); font: inherit; font-size: 14px; }
-.pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+.pill { display: inline-flex; align-items: center; white-space: nowrap; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
 .pill.low { background: var(--low-soft); color: var(--low-ink); }
 .pill.medium { background: var(--medium-soft); color: var(--medium-ink); }
 .pill.high { background: var(--high-soft); color: var(--high-ink); }
@@ -162,14 +171,24 @@ button { font: inherit; }
 .auth .switch-link { text-align: center; }
 .auth .switch-link a { color: var(--brand); font-weight: 700; }
 
-@media (max-width: 900px) {
+/* The full menu needs about 1,330px; below that the user name goes, then the menu collapses. */
+@media (max-width: 1360px) {
+  .user-name { display: none; }
+}
+
+@media (max-width: 1240px) {
   .nav { gap: 12px; padding: 0 16px; }
   .menu-btn { display: block; }
   .report-btn { margin-left: auto; }
   .nav-menu { display: none; position: absolute; top: 64px; left: 0; right: 0; flex-direction: column; align-items: stretch; gap: 12px; padding: 12px 16px 16px; background: var(--surface); border-bottom: 1px solid var(--line); }
   .nav.open .nav-menu { display: flex; }
   .links { flex-direction: column; }
+  .drop-menu { position: static; min-width: 0; padding: 2px 0 0 14px; border: 0; box-shadow: none; }
   .account { margin-left: 0; flex-wrap: wrap; }
+  .user-name { display: inline; }
+}
+
+@media (max-width: 900px) {
   .wrap, .page { padding-left: 16px; padding-right: 16px; }
   .hero { grid-template-columns: 1fr; gap: 32px; padding-top: 36px; }
   .hero h1 { font-size: 34px; }

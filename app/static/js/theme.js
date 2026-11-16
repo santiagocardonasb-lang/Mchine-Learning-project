@@ -28,4 +28,11 @@
     const open = nav.classList.toggle('open');
     menuButton.setAttribute('aria-expanded', String(open));
   });
+
+  // The admin dropdown is a <details>; a click elsewhere closes it like any menu.
+  document.addEventListener('click', function (event) {
+    document.querySelectorAll('.nav-drop[open]').forEach(function (drop) {
+      if (!drop.contains(event.target)) drop.removeAttribute('open');
+    });
+  });
 })();
