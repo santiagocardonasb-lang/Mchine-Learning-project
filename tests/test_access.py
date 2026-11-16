@@ -3,7 +3,9 @@ import pytest
 from app.extensions import db
 from app.services import auth_service
 
-PAGES = ["/app", "/map", "/model", "/reports/new", "/reports/mine", "/admin", "/admin/reports"]
+PAGES = ["/app", "/map", "/model", "/reports/new", "/reports/mine", "/admin", "/admin/reports",
+         "/risk-check", "/inferences", "/help", "/admin/priorities", "/admin/monitoring", "/admin/feedback"]
+ADMIN_PAGES = ["/admin", "/admin/reports", "/admin/priorities", "/admin/monitoring", "/admin/feedback"]
 APIS = ["/api/risk", "/api/heatmap", "/api/geo/locate?lat=4.6&lon=-74.1", "/api/neighborhoods?q=tintal"]
 
 
@@ -61,10 +63,24 @@ def test_app_menu_by_role(client, db_session):
     assert "All reports" not in html and 'href="/admin"' not in html
     assert client.get("/model").status_code == 200
 
+    for link in ('href="/risk-check"', 'href="/inferences"', 'href="/help?page=/app"'):
+        assert link in html
+    assert "Collection priorities" not in html and 'href="/admin/monitoring"' not in html
+
     client.post("/auth/logout")
     login(client, "boss@mail.com")
     html = client.get("/app").get_data(as_text=True)
     assert 'href="/admin/reports"' in html and 'href="/admin"' in html
+    for link in ('href="/admin/priorities"', 'href="/admin/monitoring"', 'href="/admin/feedback"'):
+        assert link in html
+
+
+@pytest.mark.parametrize("path", ADMIN_PAGES)
+def test_admin_pages_are_forbidden_to_citizens(client, db_session, path):
+    auth_service.register("Ana", "ana@mail.com", "secret123")
+    login(client, "ana@mail.com")
+
+    assert client.get(path).status_code == 403
 
 
 def test_logout_returns_to_presentation(client, db_session):
