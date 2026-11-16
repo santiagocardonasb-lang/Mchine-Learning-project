@@ -28,6 +28,7 @@
           <small>{{ r.locality.name if r.locality }}{{ " · " ~ r.neighborhood if r.neighborhood }}</small>
           <p class="note">{{ r.waste_type | replace("_", " ") | capitalize }}, {{ size_labels[r.size] }}{{ " — " ~ r.description if r.description }}</p>
           <a class="link" href="{{ url_for('map.index') }}?lat={{ r.latitude }}&lon={{ r.longitude }}">See on the map <i class="bi bi-arrow-right"></i></a>
+          {% if r.upz %}<a class="link" href="{{ url_for('model.risk_check', upz=r.upz.code) }}">Check this zone's risk <i class="bi bi-arrow-right"></i></a>{% endif %}
         </div>
       {% endfor %}
     </div>

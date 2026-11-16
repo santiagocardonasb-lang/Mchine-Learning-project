@@ -90,6 +90,22 @@ def build_panel(reports: pd.DataFrame, zones: pd.DataFrame, now: pd.Timestamp | 
     return panel
 
 
+def latest_month(panel: pd.DataFrame) -> pd.DataFrame:
+    """The rows of the last complete month: the features the next month is predicted from."""
+    return panel[panel["month"] == panel["month"].max()]
+
+
+def zone_row(reports: pd.DataFrame, zones: pd.DataFrame, upz_code: str,
+             now: pd.Timestamp | None = None) -> pd.DataFrame:
+    """One UPZ's panel row for the last complete month, built exactly as for training.
+
+    The whole panel is built because the lags, the month range and the population split all
+    depend on every zone's reports, not only this one's.
+    """
+    latest = latest_month(build_panel(reports, zones, now=now))
+    return latest[latest["upz_code"] == str(upz_code)]
+
+
 def tercile_cuts(rates: pd.Series) -> tuple[float, float]:
     low, high = np.quantile(rates, [1 / 3, 2 / 3])
     return float(low), float(high)
