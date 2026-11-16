@@ -13,6 +13,9 @@ pip install -r requirements.txt
 copy .env.example .env        # macOS/Linux: cp .env.example .env
 flask --app wsgi db upgrade
 flask --app wsgi load-zones
+flask --app wsgi seed-synthetic
+flask --app wsgi train
+flask --app wsgi create-admin --email you@example.com --name "Your name"
 flask --app wsgi run
 ```
 
@@ -27,6 +30,9 @@ Run the tests with `pytest`.
 |---|---|
 | `flask --app wsgi db upgrade` | Applies the database migrations |
 | `flask --app wsgi load-zones` | Loads the 19 localities and 112 UPZ (safe to run again) |
+| `flask --app wsgi seed-synthetic` | Loads the synthetic report history from `data/synthetic_reports.csv` (replaces previous synthetic rows) |
+| `flask --app wsgi train` | Trains and compares the models, stores a new model version, its predictions and collection priorities |
+| `flask --app wsgi prune-events` | Deletes monitoring events older than 30 days |
 | `flask --app wsgi create-admin --email <email> --name <name>` | Creates an admin, or promotes an existing user and resets the password |
 | `python scripts/prepare_geo.py` | Rebuilds the GeoJSON files and `data/zone_stats.csv` from the open data in `data/raw/` |
 
@@ -84,7 +90,9 @@ Hosted on Render with a Supabase PostgreSQL database; both belong to the project
 - Build command: `pip install -r requirements.txt && flask db upgrade`
 - Start command: `gunicorn wsgi:app`
 
-After the first deploy, run `load-zones` and `create-admin` once against the Supabase database.
+Render applies the migrations on every build. After the first deploy, run `load-zones`,
+`seed-synthetic`, `train` and `create-admin` once against the Supabase database. Users who register
+start as citizens; an administrator can promote them in Admin > Admin panel > Users.
 
 ## Data sources
 
