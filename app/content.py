@@ -563,7 +563,7 @@ RESOURCES = [
         "icon": "play-btn",
         "title": "Presentation video",
         "text": "The 20-minute presentation of the project and a live demo.",
-        "url": None,
+        "url": "https://youtu.be/z8FCJmxW2Mc",
     },
 ]
 
