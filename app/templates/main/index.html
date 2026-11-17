@@ -20,7 +20,7 @@
 {% block content %}
 <div class="page presentation">
   <header class="pres-hero">
-    <span class="eyebrow"><i class="bi bi-mortarboard"></i>Machine Learning project · CRISP-DM</span>
+    <span class="eyebrow"><i class="bi bi-mortarboard"></i>Machine Learning project · CRISP-ML(Q)</span>
     <h1>{{ content.PROJECT_TITLE }}</h1>
     <p class="lead">{{ content.SOLUTION_INTRO }}</p>
     <div class="ctas">
@@ -33,7 +33,9 @@
     </div>
     <nav class="pres-toc" aria-label="Sections">
       <a href="#context">Context</a><a href="#solution">Solution</a><a href="#definition">Definition</a>
-      <a href="#objectives">Objectives</a><a href="#results">Results</a><a href="#phases">CRISP-DM</a>
+      <a href="#objectives">Objectives</a><a href="#framework">Reference framework</a>
+      <a href="#methodology">Methodology</a><a href="#phases">CRISP-ML phases</a><a href="#schedule">Schedule</a>
+      <a href="#results">Results</a><a href="#resources">Resources</a><a href="#references">References</a>
     </nav>
   </header>
 
@@ -71,37 +73,44 @@
     </ul>
   </section>
 
-  <section id="results">
-    <h2>Results</h2>
-    {% if run %}
-      {% set m = run.metrics %}
-      <div class="result-grid">
-        <div class="card result">
-          <span class="label">Chosen model</span>
-          <b>{{ m.model_names[m.chosen_model] }}</b>
-          <small>Run {{ run.id }} · trained {{ run.trained_at.strftime("%b %d, %Y") }} on {{ "{:,}".format(run.n_rows) }} zone-months</small>
+  <section id="framework">
+    <h2>Reference framework</h2>
+    <p class="sub">Related studies, the theory behind the model and the concepts used on this page.</p>
+    <div class="steps related">
+      {% for work in content.RELATED_WORK %}
+        <div class="card step">
+          <span class="label">{{ work.cite }}</span>
+          <h3>{{ work.title }}</h3>
+          <p>{{ work.text }}</p>
         </div>
-        <div class="card result">
-          <span class="label">Test macro-F1</span>
-          <b>{{ "%.2f"|format(m.test.macro_f1) }}</b>
-          <small>vs. {{ "%.2f"|format(m.baseline_test.macro_f1) }} for the most-frequent baseline</small>
-        </div>
-        <div class="card result">
-          <span class="label">High-risk UPZ{{ " in " ~ city.period.strftime("%B %Y") if city.period }}</span>
-          <b class="high-ink">{{ city.high_zones }}</b>
-          <small>of {{ city.zones }} UPZ{{ ": " ~ priority_zones | map(attribute="upz") | join(", ") if priority_zones }}</small>
-        </div>
+      {% endfor %}
+    </div>
+    <div class="framework-grid">
+      <div class="card prose">
+        <h3>Theoretical framework</h3>
+        <dl class="pres-terms">
+          {% for term, text in content.THEORY %}<dt>{{ term }}</dt><dd>{{ text }}</dd>{% endfor %}
+        </dl>
       </div>
-    {% else %}
-      <div class="card empty"><i class="bi bi-hourglass-split"></i>Results appear after the first model run.</div>
-    {% endif %}
+      <div class="card prose">
+        <h3>Technical concepts</h3>
+        <dl class="pres-terms">
+          {% for term, text in content.CONCEPTS %}<dt>{{ term }}</dt><dd>{{ text }}</dd>{% endfor %}
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <section id="methodology" class="card prose">
+    <h2>Methodology</h2>
+    {% for paragraph in content.METHODOLOGY %}<p class="note">{{ paragraph }}</p>{% endfor %}
   </section>
 
   <section id="phases">
-    <h2>CRISP-DM phases</h2>
+    <h2>CRISP-ML phases</h2>
     <p class="sub">The methodology applied to predicting waste accumulation risk by UPZ, step by step.</p>
     {# Without JavaScript the tab list stays hidden and every phase is shown in order. #}
-    <div class="phase-tabs" role="tablist" aria-label="CRISP-DM phases" hidden>
+    <div class="phase-tabs" role="tablist" aria-label="CRISP-ML phases" hidden>
       {% for phase in content.PHASES %}
         <button type="button" role="tab" id="tab-{{ phase.slug }}" aria-controls="phase-{{ phase.slug }}"
                 aria-selected="{{ 'true' if loop.first else 'false' }}" tabindex="{{ 0 if loop.first else -1 }}">
@@ -128,6 +137,77 @@
         </ol>
       </div>
     {% endfor %}
+  </section>
+
+  <section id="schedule">
+    <h2>Development schedule</h2>
+    <p class="sub">Actual dates come from the repository history; each activity was planned two weeks earlier.</p>
+    <div class="card pres-table-card">
+      <table class="pres-table">
+        <thead><tr><th>Activity</th><th>Responsible</th><th>Planned</th><th>Actual</th><th>Deliverable</th></tr></thead>
+        <tbody>
+          {% for row in content.SCHEDULE %}
+            <tr>
+              <td>{{ row.activity }}</td>
+              <td>{{ row.responsible }}</td>
+              <td>{{ row.planned.strftime("%b %d, %Y") }}</td>
+              <td>{{ row.actual.strftime("%b %d, %Y") }}</td>
+              <td>{{ row.deliverable }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="results">
+    <h2>Results</h2>
+    {% if run %}
+      {% set m = run.metrics %}
+      <div class="result-grid">
+        <div class="card result">
+          <span class="label">Chosen model</span>
+          <b>{{ m.model_names[m.chosen_model] }}</b>
+          <small>Run {{ run.id }} · trained {{ run.trained_at.strftime("%b %d, %Y") }} on {{ "{:,}".format(run.n_rows) }} zone-months</small>
+        </div>
+        <div class="card result">
+          <span class="label">Test macro-F1</span>
+          <b>{{ "%.2f"|format(m.test.macro_f1) }}</b>
+          <small>vs. {{ "%.2f"|format(m.baseline_test.macro_f1) }} for the most-frequent baseline</small>
+        </div>
+        <div class="card result">
+          <span class="label">High-risk UPZ{{ " in " ~ city.period.strftime("%B %Y") if city.period }}</span>
+          <b class="high-ink">{{ city.high_zones }}</b>
+          <small>of {{ city.zones }} UPZ{{ ": " ~ priority_zones | map(attribute="upz") | join(", ") if priority_zones }}</small>
+        </div>
+      </div>
+    {% else %}
+      <div class="card empty"><i class="bi bi-hourglass-split"></i>Results appear after the first model run.</div>
+    {% endif %}
+  </section>
+
+  <section id="resources">
+    <h2>Project resources</h2>
+    <div class="resource-grid">
+      {% for item in content.RESOURCES %}
+        {% if item.url %}
+          <a class="card resource" href="{{ item.url }}" target="_blank" rel="noopener">
+            <i class="bi bi-{{ item.icon }}"></i><b>{{ item.title }}</b><small>{{ item.text }}</small>
+          </a>
+        {% else %}
+          <div class="card resource is-pending">
+            <i class="bi bi-{{ item.icon }}"></i><b>{{ item.title }}</b><small>Available soon.</small>
+          </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </section>
+
+  <section id="references" class="card prose">
+    <h2>References</h2>
+    <ul class="pres-refs">
+      {% for before, italic, after in content.REFERENCES %}<li>{{ before }}<i>{{ italic }}</i>{{ after }}</li>{% endfor %}
+    </ul>
   </section>
 </div>
 {% endblock %}

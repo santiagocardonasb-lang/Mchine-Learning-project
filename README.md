@@ -1,8 +1,9 @@
 # LocWaste
 
 Flask web app where citizens report waste accumulation points in Bogotá. A machine learning
-model predicts waste-accumulation risk per zone and shows it on a map. Built with the CRISP-DM
-methodology; see `docs/superpowers/specs/2026-10-31-locwaste-design.md`.
+model predicts waste-accumulation risk per zone and shows it on a map. Built with the CRISP-ML(Q)
+methodology; see `docs/superpowers/specs/2026-10-31-locwaste-design.md`, the
+[user guide](docs/user-guide.md) and the [CRISP-ML evidence](docs/crisp-ml-evidence.md).
 
 ## Run locally
 

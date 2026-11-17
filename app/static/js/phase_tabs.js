@@ -1,4 +1,4 @@
-// CRISP-DM tabs on the presentation page (WAI-ARIA tabs pattern). Without this script every phase stays visible.
+// CRISP-ML tabs on the presentation page (WAI-ARIA tabs pattern). Without this script every phase stays visible.
 (function () {
   const tablist = document.querySelector('.phase-tabs');
   if (!tablist) return;

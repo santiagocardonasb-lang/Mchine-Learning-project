@@ -17,7 +17,7 @@
 .result small { color: var(--fg-faint); }
 .presentation .empty { margin-bottom: 0; }
 
-.phase-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+.phase-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
 .phase-tabs[hidden] { display: none; }
 .phase-tabs button { display: flex; align-items: center; gap: 10px; padding: 12px; text-align: left; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--fg-muted); font-weight: 700; font-size: 14px; cursor: pointer; }
 .phase-tabs button small { display: block; font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--fg-faint); }
@@ -32,13 +32,44 @@
 .phase-steps > li::before { content: counter(step); position: absolute; left: 0; top: 0; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--subtle); font-size: 13px; font-weight: 800; }
 .phase-steps .pres-list { margin-top: 8px; font-size: 14px; }
 
+.steps.related { padding-bottom: 18px; }
+.steps.related .label { display: block; margin-bottom: 8px; }
+.framework-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.framework-grid .prose { margin-bottom: 0; }
+.framework-grid h3 { margin: 0; font-size: 17px; letter-spacing: -.02em; }
+.pres-terms { margin: 0; display: grid; gap: 4px; font-size: 14px; }
+.pres-terms dt { font-weight: 700; margin-top: 8px; }
+.pres-terms dt:first-child { margin-top: 0; }
+.pres-terms dd { margin: 0; color: var(--fg-muted); line-height: 1.6; }
+
+.pres-table-card { padding: 8px 18px; overflow-x: auto; }
+.pres-table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 720px; }
+.pres-table th, .pres-table td { text-align: left; padding: 11px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.pres-table tr:last-child td { border-bottom: 0; }
+.pres-table th { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--fg-faint); }
+.pres-table td:nth-child(2), .pres-table td:nth-child(3), .pres-table td:nth-child(4) { white-space: nowrap; }
+.pres-table td:nth-child(3) { color: var(--fg-faint); }
+.pres-table td:last-child { color: var(--fg-muted); }
+
+.resource-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+.resource { padding: 18px; display: flex; flex-direction: column; gap: 6px; color: inherit; }
+.resource i { font-size: 22px; color: var(--brand); }
+.resource small { color: var(--fg-muted); font-size: 13px; }
+a.resource:hover { border-color: var(--brand); }
+.resource.is-pending { opacity: .6; }
+.resource.is-pending small { color: var(--fg-faint); }
+
+.pres-refs { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; font-size: 14px; color: var(--fg-muted); line-height: 1.6; }
+.pres-refs li { padding-left: 2em; text-indent: -2em; overflow-wrap: anywhere; }
+
 @media (max-width: 900px) {
   .pres-hero h1 { font-size: 28px; }
-  .result-grid, .phase-tabs { grid-template-columns: 1fr 1fr; }
+  .result-grid, .phase-tabs, .resource-grid { grid-template-columns: 1fr 1fr; }
+  .framework-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 560px) {
   .pres-hero h1 { font-size: 24px; }
-  .result-grid, .phase-tabs { grid-template-columns: 1fr; }
+  .result-grid, .phase-tabs, .resource-grid { grid-template-columns: 1fr; }
   .phase-panel { padding: 20px; }
 }
