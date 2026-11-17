@@ -88,7 +88,7 @@ def test_nav_links_to_model(client, db_session):
     assert 'href="/model"' in client.get("/app").get_data(as_text=True)
 
 
-def test_model_page_links_to_crisp_dm_phases(client, db_session):
+def test_model_page_links_to_crisp_ml_phases(client, db_session):
     auth_service.register("Ana", "ana@mail.com", "secret123")
     login(client, "ana@mail.com")
     assert 'href="/#phases"' in client.get("/model").get_data(as_text=True)
