@@ -539,7 +539,7 @@ RESOURCES = [
         "icon": "file-earmark-pdf",
         "title": "Technical report",
         "text": "The consolidated report of the three activities, in APA format.",
-        "url": None,
+        "url": "/static/docs/LocWaste_Final_Report.pdf",
     },
     {
         "icon": "clipboard-check",
