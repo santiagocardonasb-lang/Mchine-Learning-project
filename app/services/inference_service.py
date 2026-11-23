@@ -53,11 +53,13 @@ def _model(run: ModelRun):
 def _predict(upz: Upz, run: ModelRun) -> tuple:
     model = _model(run)
     row = zone_row(training_service.reports_frame(), training_service.zones_frame(), upz.code)
-    probabilities = model.predict_proba(row[ml_config.FEATURES])[0]
+    # The columns the model was trained with, so a run trained before a feature change still works.
+    columns = list(getattr(model, "feature_names_in_", ml_config.FEATURES))
+    probabilities = model.predict_proba(row[columns])[0]
     by_level = {level: float(p) for level, p in zip(model.classes_, probabilities)}
     level = max(by_level, key=by_level.get)
     period = (row["month"].iloc[0] + pd.offsets.MonthBegin(1)).date()
-    features = {name: float(row[name].iloc[0]) for name in ml_config.FEATURES}
+    features = {name: float(row[name].iloc[0]) for name in columns}
     return period, level, by_level, features
 
 

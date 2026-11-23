@@ -85,6 +85,8 @@ def build_panel(reports: pd.DataFrame, zones: pd.DataFrame, now: pd.Timestamp | 
 
     panel = panel.merge(zones, on="upz_code", how="left")
     panel["rate"] = panel["reports"] / panel["population"] * config.RATE_PER_INHABITANTS
+    # The zone's usual level: mean rate of every month up to t, so it never sees later months.
+    panel["hist_mean_rate"] = panel.groupby("upz_code")["rate"].transform(lambda s: s.expanding().mean())
     next_reports = panel.groupby("upz_code")["reports"].shift(-1)
     panel["next_rate"] = next_reports / panel["population"] * config.RATE_PER_INHABITANTS
     return panel
