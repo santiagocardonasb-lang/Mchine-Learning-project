@@ -54,6 +54,18 @@ def test_features_use_only_past_months_and_target_is_next_month():
     assert pd.isna(row(panel, "1", "2026-03-01")["next_rate"])
 
 
+def test_historical_rate_averages_only_months_up_to_t():
+    panel = panel_of(
+        report("1", "2026-01-10"),
+        report("1", "2026-02-10"), report("1", "2026-02-11"),
+        report("1", "2026-03-10"), report("1", "2026-03-11"), report("1", "2026-03-12"),
+    )
+
+    assert row(panel, "1", "2026-01-01")["hist_mean_rate"] == pytest.approx(1.0)
+    assert row(panel, "1", "2026-02-01")["hist_mean_rate"] == pytest.approx(1.5)
+    assert row(panel, "1", "2026-03-01")["hist_mean_rate"] == pytest.approx(2.0)
+
+
 def test_rejected_reports_are_left_out():
     panel = panel_of(report("1", "2026-01-10"), report("1", "2026-01-11", status="rejected"))
 

@@ -1,0 +1,87 @@
+{% extends "crisp/layout.html" %}
+{% block phase %}
+<header class="crisp-head">
+  <span class="label">Phase {{ number }}</span>
+  <h1>{{ phase.name }}</h1>
+  <p class="lead">What is watched, how drift and degradation are detected, who reviews the model and when it is retrained.</p>
+</header>
+
+<section class="card prose">
+  <h2>Indicators</h2>
+  <table class="ctable">
+    <thead><tr><th>Area</th><th>Indicator</th><th>Source</th></tr></thead>
+    <tbody>
+      <tr><td>Operation</td><td>Requests and average response time (7 days), errors, risk checks and their latency, age of the active model</td><td><code>app_events</code>, <code>inference_logs</code></td></tr>
+      <tr><td>Performance</td><td>Accuracy, macro-F1 and confusion matrix of every predicted month once it is complete</td><td>Predictions vs actual levels</td></tr>
+      <tr><td>Data drift</td><td>PSI of the report rate; change in the share of waste types, sizes and vectors</td><td>Last complete month vs training months</td></tr>
+      <tr><td>Use and quality</td><td>Pending collection priorities, open tickets by kind</td><td><code>collection_tasks</code>, <code>feedback</code></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="card prose">
+  <h2>Detecting drift and performance degradation</h2>
+  <ul>
+    <li><b>Rate drift:</b> population stability index of the monthly report rate across UPZ, last complete month vs
+      training months, ten quantile bins; flag above <b>{{ config.DRIFT_PSI_THRESHOLD }}</b> (a significant shift).</li>
+    <li><b>Mix drift:</b> largest change in the share of any waste type, size or vector category; flag above
+      <b>{{ "%.0f"|format(config.DRIFT_SHARE_THRESHOLD * 100) }} points</b>.</li>
+    <li><b>Degradation:</b> live macro-F1 of the last predicted month below
+      <b>{{ "%.0f"|format(config.PERFORMANCE_DROP_FRACTION * 100) }} %</b> of the cross-validation macro-F1 of the
+      active model (concept drift; Gama et al., 2014).</li>
+  </ul>
+  <p>Any flag shows a retraining recommendation and a <b>Retrain now</b> button on the monitoring page.</p>
+</section>
+
+<section class="card prose">
+  <h2>Review frequency, responsibilities and retraining criteria</h2>
+  <table class="ctable">
+    <thead><tr><th>When</th><th>What</th><th>Who</th></tr></thead>
+    <tbody>
+      <tr><td>Weekly</td><td>Operation indicators, errors, open tickets</td><td>Administrator on duty</td></tr>
+      <tr><td>Monthly, when a month closes</td><td>Predictions vs outcomes, drift and performance checks; review of pending priorities</td><td>Model owner (Santiago Cardona) with the team</td></tr>
+      <tr><td>On every retrain</td><td>Compare the new run's CV and test metrics with the previous one before relying on it</td><td>Model owner</td></tr>
+    </tbody>
+  </table>
+  <p><b>Retrain when:</b> a drift or performance flag appears; {{ config.AUTO_RETRAIN_THRESHOLD }} new citizen reports
+    accumulate (automatic); the features or the data sources change; or the active model is more than three months old.</p>
+</section>
+
+<section class="card prose">
+  <h2>Risks, quality controls and update procedure</h2>
+  <ul>
+    <li><b>Quality controls:</b> the automated test suite runs before every merge (leakage, complete months, cut points
+      from training months, inference logging, drift calculations); moderation keeps false reports out of training.</li>
+    <li><b>Risks:</b> reporting bias across zones, a sudden campaign that inflates reports, data from the city changing
+      format, and a retrain on too little real data.</li>
+    <li><b>Update procedure:</b> (1) change code or parameters on a branch and run <code>scripts/crisp_evidence.py</code>
+      and the tests; (2) merge through a pull request; Render redeploys; (3) retrain from the admin pages; (4) check the
+      new run on the model and monitoring pages; (5) older runs keep their metrics, predictions and logs for traceability.</li>
+  </ul>
+</section>
+
+<section class="card prose">
+  <h2>Initial monitoring test <span class="badge-sim">SIMULATED DATA</span></h2>
+  <p>Two operational months were <b>simulated</b> from the last real month of the history and checked with the same
+    drift functions the monitoring page uses (<code>app/services/monitoring_service.py</code>). The live macro-F1
+    values are also simulated. The checks are written to <code>app/static/crisp/simulated_monitoring.log</code>.</p>
+  <table class="ctable">
+    <thead><tr><th>Label</th><th>Scenario</th><th>Rate PSI</th><th>Largest share change</th><th>Live macro-F1 (floor)</th><th>Action</th></tr></thead>
+    <tbody>
+      {% for s in ev.simulated_monitoring %}
+        <tr>
+          <td><span class="badge-sim">{{ s.label }}</span></td>
+          <td>{{ s.scenario }}</td>
+          <td>{{ s.psi }}{% if s.psi_flag %} <b class="high-ink">flag</b>{% endif %}</td>
+          <td>{{ "%.1f"|format(s.max_share_shift * 100) }} pts{% if s.share_flag %} <b class="high-ink">flag</b>{% endif %}</td>
+          <td>{{ s.live_macro_f1 }} ({{ s.performance_floor }}){% if s.performance_flag %} <b class="high-ink">flag</b>{% endif %}</td>
+          <td><b>{{ s.action }}</b></td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p>The stable month raises no flag; the report surge (rates × 1.8 and a fifth of the reports turned into construction debris) raises the
+    drift and performance flags and recommends retraining, as designed. On the published system, the monitoring page
+    reported a real rate PSI of 0.092 for October 2026 (checked on November 16, 2026), below the threshold.</p>
+</section>
+{% endblock %}

@@ -25,9 +25,9 @@ MIN_MONTHS = 12
 CLASS_WEIGHT = "balanced"
 LOGREG_C = 1.0
 LOGREG_MAX_ITER = 2000
-N_ESTIMATORS = 300
-MAX_DEPTH = 8
-MIN_SAMPLES_LEAF = 5
+N_ESTIMATORS = 100  # chosen by scripts/crisp_evidence.py (best CV macro-F1)
+MAX_DEPTH = 4
+MIN_SAMPLES_LEAF = 1
 
 # Retraining
 AUTO_RETRAIN_THRESHOLD = 50
@@ -47,6 +47,7 @@ FEATURES = [
     "lag_2",
     "lag_3",
     "rolling_mean_3",
+    "hist_mean_rate",
     "change_1",
     "share_large",
     "share_vectors",
@@ -65,6 +66,7 @@ FEATURE_LABELS = {
     "lag_2": "Reports 2 months ago",
     "lag_3": "Reports 3 months ago",
     "rolling_mean_3": "3-month average",
+    "hist_mean_rate": "Historical rate per 10,000",
     "change_1": "Change vs last month",
     "share_large": "Share of large piles",
     "share_vectors": "Share with vectors",

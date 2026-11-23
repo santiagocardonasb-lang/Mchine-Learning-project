@@ -1,0 +1,95 @@
+{% extends "crisp/layout.html" %}
+{% block phase %}
+{% set best = ev.best %}
+<header class="crisp-head">
+  <span class="label">Phase {{ number }}</span>
+  <h1>{{ phase.name }}</h1>
+  <p class="lead">Three algorithms, a recorded hyperparameter search over the training months and the reasons behind each modeling decision.</p>
+</header>
+
+<section class="card prose">
+  <h2>Algorithms and why they fit the problem</h2>
+  <table class="ctable">
+    <thead><tr><th>Algorithm</th><th>Why it was selected</th></tr></thead>
+    <tbody>
+      <tr><td>Most-frequent baseline</td><td>Sets the floor: any useful model has to beat predicting the majority class.</td></tr>
+      <tr><td>Logistic regression</td><td>Simple, linear and interpretable; tests whether a linear relation between recent history and risk is enough.</td></tr>
+      <tr><td>Random forest</td><td>Captures non-linear effects and interactions (a spike matters more in a zone with critical points), is robust to outliers and unscaled features, and gives feature importances (Breiman, 2001).</td></tr>
+    </tbody>
+  </table>
+  <p>Gradient boosting was also tried as an exploratory experiment with the same features and folds; it reached a lower
+    CV macro-F1 (0.550) than the random forest, so it was not pursued further.</p>
+</section>
+
+<section class="card prose">
+  <h2>Configuration of the served models</h2>
+  <table class="ctable">
+    <thead><tr><th>Model</th><th>Parameters</th></tr></thead>
+    <tbody>
+      <tr><td>Logistic regression</td><td>StandardScaler → LogisticRegression(C = {{ config.LOGREG_C }}, max_iter = {{ config.LOGREG_MAX_ITER }}, class_weight = {{ config.CLASS_WEIGHT }})</td></tr>
+      <tr><td>Random forest</td><td>n_estimators = {{ config.N_ESTIMATORS }}, max_depth = {{ config.MAX_DEPTH }}, min_samples_leaf = {{ config.MIN_SAMPLES_LEAF }}, class_weight = {{ config.CLASS_WEIGHT }}, random_state = {{ config.RANDOM_STATE }}</td></tr>
+    </tbody>
+  </table>
+  <p>Inputs: the {{ config.FEATURES|length }} features of phase 2. Every parameter lives in <code>ml/config.py</code>; each
+    training run stores them with its metrics, so any result can be reproduced.</p>
+</section>
+
+<section class="card prose">
+  <h2>Validation and hyperparameter tuning</h2>
+  <p>Grid search with the same five-fold TimeSeriesSplit over the {{ ev.partitions.train|length }} training months
+    (the test months are never used here). Selection rule, fixed before the search: highest mean CV macro-F1, then
+    recall of the high class.</p>
+  <ul>
+    <li>Logistic regression: C ∈ {0.01, 0.1, 1, 10}.</li>
+    <li>Random forest: n_estimators ∈ {100, 300} × max_depth ∈ {4, 8, 12, none} × min_samples_leaf ∈ {1, 5, 20}.</li>
+  </ul>
+  <div class="kpis">
+    <div class="card kpi"><span class="label">Best random forest</span><b>{{ "%.3f"|format(best.random_forest.val_macro_f1) }}</b><small>{{ best.random_forest.params.n_estimators }} trees, depth {{ best.random_forest.params.max_depth }}, leaf {{ best.random_forest.params.min_samples_leaf }}</small></div>
+    <div class="card kpi"><span class="label">Best logistic regression</span><b>{{ "%.3f"|format(best.logistic_regression.val_macro_f1) }}</b><small>C = {{ best.logistic_regression.params.C }}</small></div>
+    <div class="card kpi"><span class="label">Configurations</span><b>{{ ev.experiments|length }}</b><small>× 5 folds, all recorded below</small></div>
+  </div>
+  <figure class="narrow"><img src="{{ url_for('static', filename='crisp/tuning_heatmap.png') }}" alt="CV macro-F1 of the random forest by maximum depth and minimum samples per leaf"></figure>
+  <details class="experiments">
+    <summary>All {{ ev.experiments|length }} experiments</summary>
+    <div class="scroll"><table class="ctable small">
+      <thead><tr><th>Model</th><th>Parameters</th><th>CV macro-F1</th><th>± std</th><th>CV recall high</th><th>Train macro-F1</th></tr></thead>
+      <tbody>
+        {% for e in ev.experiments|sort(attribute="val_macro_f1", reverse=True) %}
+          <tr{% if e.current %} class="chosen"{% endif %}>
+            <td>{{ "Random forest" if e.model == "random_forest" else "Logistic regression" }}</td>
+            <td>{% for k, v in e.params.items() %}{{ k }}={{ v }}{{ ", " if not loop.last }}{% endfor %}</td>
+            <td>{{ "%.4f"|format(e.val_macro_f1) }}</td><td>{{ "%.4f"|format(e.val_macro_f1_std) }}</td>
+            <td>{{ "%.3f"|format(e.val_recall_high) }}</td><td>{{ "%.3f"|format(e.train_macro_f1) }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+    <p class="note">Highlighted rows are the configurations in <code>ml/config.py</code>.</p>
+  </details>
+</section>
+
+<section class="card prose">
+  <h2>Experiment record</h2>
+  <table class="ctable">
+    <thead><tr><th>#</th><th>Experiment</th><th>CV macro-F1 (random forest)</th><th>Decision</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>15 features, 300 trees, depth 8, leaf 5 (first version)</td><td>0.571 ± 0.009</td><td>Baseline of the project; deployed until this phase</td></tr>
+      <tr><td>2</td><td>Grid search on the 15 features</td><td>0.561 – 0.582</td><td>All configurations within about one standard deviation: tuning alone does not help much</td></tr>
+      <tr><td>3</td><td>Gradient boosting with the historical rate</td><td>0.550</td><td>Discarded</td></tr>
+      <tr><td>4</td><td>Add the zone's historical rate (domain knowledge: a zone's usual level)</td><td>0.602 (same parameters)</td><td>Kept: largest gain of all experiments</td></tr>
+      <tr><td>5</td><td>Grid search with 16 features</td><td>{{ "%.3f"|format(best.random_forest.val_macro_f1) }}</td><td>Adopted by the selection rule; also overfits less (train {{ "%.2f"|format(best.random_forest.train_macro_f1) }})</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="card prose">
+  <h2>How domain knowledge shaped the model</h2>
+  <ul>
+    <li><b>Persistence:</b> accumulation points recur, so lags, the 3-month average and the zone's historical rate were built.</li>
+    <li><b>Critical points and density:</b> UAESP's registered points and crowded localities concentrate dumping, so both are inputs.</li>
+    <li><b>Rainy season:</b> April–May and October–November raise accumulation, so the month of the year is an input.</li>
+    <li><b>Rates, not counts:</b> zones differ in population, so the target and the main features are per 10,000 inhabitants.</li>
+    <li><b>The costliest error:</b> missing a critical zone hurts more than an extra visit, so classes are weighted (balanced) and recall of the high class breaks ties.</li>
+  </ul>
+</section>
+{% endblock %}

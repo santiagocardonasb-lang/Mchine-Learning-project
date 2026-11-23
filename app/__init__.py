@@ -45,6 +45,7 @@ def create_app(config_name: str | None = None) -> Flask:
     from app.blueprints.admin import admin_bp
     from app.blueprints.api import api_bp
     from app.blueprints.auth import auth_bp
+    from app.blueprints.crisp import crisp_bp
     from app.blueprints.main import main_bp
     from app.blueprints.map import map_bp
     from app.blueprints.model import model_bp
@@ -62,6 +63,7 @@ def create_app(config_name: str | None = None) -> Flask:
     app.register_blueprint(model_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(monitoring_bp)
+    app.register_blueprint(crisp_bp)
 
     register_commands(app)
     register_ml_commands(app)

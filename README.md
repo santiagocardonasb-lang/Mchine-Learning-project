@@ -25,6 +25,19 @@ database URL out of your local `.env`, so local runs never write to production.
 
 Run the tests with `pytest`.
 
+### Reproduce the CRISP-ML evidence
+
+```
+pip install -r requirements-dev.txt
+python scripts/crisp_evidence.py
+```
+
+It reads only `data/`, runs the data-quality checks, the hyperparameter search with temporal
+cross-validation, the final training and a simulated monitoring test, and writes
+`app/static/crisp/evidence.json`, the figures and `simulated_monitoring.log`. The pages at
+`/crisp-ml` read those files, so the app, the repository and the report show the same numbers.
+After changing a feature or a parameter, run it again and retrain the deployed model.
+
 ## Commands
 
 | Command | What it does |
@@ -41,6 +54,10 @@ Run the tests with `pytest`.
 
 See `docs/superpowers/specs/2026-11-15-operations-design.md` for the decisions behind these pages.
 
+- **CRISP-ML documentation and model demo** (`/crisp-ml`, public): one page per phase with the
+  decisions, figures and evidence; `/crisp-ml/deployment` accepts the 16 features of a zone-month
+  (prefilled from a real UPZ) and returns the active model's prediction; signed-in users' demos are
+  saved in their inference history, anonymous ones are not saved.
 - **Risk check** (`/risk-check`, any signed-in user): pick a UPZ, or press "Check risk now" on the
   map's zone card or "Check this zone's risk" in My reports. The active model predicts next
   month's level and class probabilities from that zone's stored reports, with the same features

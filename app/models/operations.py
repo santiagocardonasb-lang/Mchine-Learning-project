@@ -4,7 +4,7 @@ from app.extensions import db
 from app.models.model_run import RISK_LEVELS
 from app.models.user import utcnow
 
-INFERENCE_KINDS = ("zone", "batch")
+INFERENCE_KINDS = ("zone", "batch", "demo")
 INFERENCE_STATUSES = ("ok", "error")
 TASK_STATUSES = ("pending", "scheduled", "done", "dismissed")
 OPEN_TASK_STATUSES = ("pending", "scheduled")

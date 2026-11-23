@@ -45,10 +45,10 @@ def add_reports(upz_code=KENNEDY_UPZ, n=3):
     db.session.commit()
 
 
-def fake_run():
-    """An active run whose artifact is a tiny forest over the real feature list."""
+def fake_run(columns=config.FEATURES):
+    """An active run whose artifact is a tiny forest over the given feature list."""
     rng = np.random.RandomState(0)
-    features = pd.DataFrame(rng.rand(30, len(config.FEATURES)), columns=config.FEATURES)
+    features = pd.DataFrame(rng.rand(30, len(columns)), columns=columns)
     model = RandomForestClassifier(n_estimators=3, random_state=0).fit(features, ["low", "medium", "high"] * 10)
     buffer = io.BytesIO()
     joblib.dump(model, buffer)
@@ -261,3 +261,14 @@ def test_cached_model_skips_the_artifact_blob(users):
 
     selects = [s for s in statements if s.lstrip().upper().startswith("SELECT")]
     assert selects and not any("artifact" in s for s in selects)
+
+
+def test_run_trained_before_a_new_feature_still_predicts(users):
+    old_columns = [name for name in config.FEATURES if name != "hist_mean_rate"]
+    add_reports()
+    fake_run(old_columns)
+
+    result = inference_service.predict_zone(users[0], Upz.query.filter_by(code=KENNEDY_UPZ).one())
+
+    assert result.level in config.RISK_LEVELS
+    assert list(result.features) == old_columns

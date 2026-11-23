@@ -1,0 +1,107 @@
+{% extends "crisp/layout.html" %}
+{% block phase %}
+<header class="crisp-head">
+  <span class="label">Phase {{ number }}</span>
+  <h1>{{ phase.name }}</h1>
+  <p class="lead">The selected model is saved with its preprocessing, served by this Flask application and already
+    integrated into the LocWaste information system.</p>
+</header>
+
+<section class="card prose" id="demo">
+  <h2>Try the model</h2>
+  <p>Enter the values of one zone-month and the active model predicts next month's risk. The form starts with a real
+    zone's last complete month; change any value to see how the prediction responds.</p>
+  {% if unavailable %}
+    <div class="card empty"><i class="bi bi-hourglass-split"></i>{{ unavailable }}</div>
+  {% else %}
+    <form class="prefill" method="get" action="{{ url_for('crisp.deployment') }}#demo">
+      <label for="upz">Start from the last month of</label>
+      <select id="upz" name="upz">
+        {% for z in zones %}<option value="{{ z.code }}" {{ "selected" if z.code == upz.code }}>{{ z.name }} · {{ z.locality.name }}</option>{% endfor %}
+      </select>
+      <button class="btn btn-soft" type="submit">Load values</button>
+    </form>
+    <form class="demo-form" method="post" action="{{ url_for('crisp.deployment', upz=upz.code) }}#demo">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="demo-grid">
+        {% for name in columns %}
+          <label><span>{{ labels.get(name, name) }}</span>
+            <input type="number" step="any" name="{{ name }}" value="{{ values.get(name, '') }}" required></label>
+        {% endfor %}
+      </div>
+      {% if errors %}<ul class="errors">{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+      <button class="btn btn-brand" type="submit"><i class="bi bi-activity"></i>Predict next month's risk</button>
+    </form>
+    {% if result %}
+      <div class="card demo-result">
+        <span class="label">Prediction · model version {{ result.run.id }}</span>
+        <b class="level {{ result.level }}">{{ result.level|capitalize }} risk</b>
+        <div class="probs">
+          {% for lvl in config.RISK_LEVELS %}{% set p = result.probabilities.get(lvl, 0) %}
+            <div><span>{{ lvl }}</span><i style="width: {{ (p * 100)|round(1) }}%" class="{{ lvl }}"></i><b>{{ "%.0f"|format(p * 100) }} %</b></div>
+          {% endfor %}
+        </div>
+        <small>Answered in {{ "%.0f"|format(result.duration_ms) }} ms{{ " and saved in your inference history as a model demo" if result.logged else "; sign in to keep demo predictions in your inference history" }}.
+          It is a forecast from report patterns, not a measurement of waste on the ground.</small>
+      </div>
+    {% endif %}
+  {% endif %}
+</section>
+
+<section class="card prose">
+  <h2>Saved model and preprocessing</h2>
+  <ul>
+    <li>Each training run serializes the fitted estimator with joblib and stores it in the <code>model_runs</code> table
+      (the hosting disk is ephemeral), together with its parameters, metrics, training window and tercile cut points.</li>
+    <li>Preprocessing travels with the model: logistic regression is a scikit-learn pipeline with its fitted
+      StandardScaler; the forest needs no scaling. Feature construction is the shared function
+      <code>ml/features.py::build_panel</code>, used by training and by every prediction.</li>
+    <li>Inference reads the columns the model was trained with (<code>feature_names_in_</code>), so a model trained
+      before a feature change keeps working until it is retrained.</li>
+  </ul>
+</section>
+
+<section class="card prose">
+  <h2>Inputs, outputs, dependencies and execution</h2>
+  <table class="ctable">
+    <tbody>
+      <tr><th>Inputs</th><td>{{ config.FEATURES|length }} numeric features of one UPZ for one month (phase 2), built from stored reports or entered in the demo</td></tr>
+      <tr><th>Outputs</th><td>Next month's level (low, medium, high) and the probability of each class</td></tr>
+      <tr><th>Dependencies</th><td>Python 3, Flask, SQLAlchemy, pandas, NumPy, scikit-learn, joblib (pinned in <code>requirements.txt</code>); PostgreSQL in production, SQLite locally</td></tr>
+      <tr><th>Run locally</th><td><code>pip install -r requirements.txt</code> · <code>flask --app wsgi db upgrade</code> · <code>load-zones</code> · <code>seed-synthetic</code> · <code>train</code> · <code>flask --app wsgi run</code></td></tr>
+      <tr><th>Reproduce the evidence</th><td><code>python scripts/crisp_evidence.py</code> (writes <code>app/static/crisp/</code>)</td></tr>
+      <tr><th>Production</th><td>Render (<code>gunicorn wsgi:app</code>) with Supabase PostgreSQL; migrations applied on every build</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="card prose">
+  <h2>User instructions</h2>
+  <ol>
+    <li>Open the demo above, choose a zone to load real values, change them if you want and press <b>Predict</b>.</li>
+    <li>Signed-in users can run <b>Risk check</b> for any UPZ from its stored reports, or press <b>Check risk now</b> on the map.</li>
+    <li>Read the level together with its probability: a high level with a high probability means the zone should be visited first.</li>
+    <li>Report anything that looks wrong from <b>Help &amp; feedback</b> (question mark in the menu).</li>
+  </ol>
+</section>
+
+<section class="card prose">
+  <h2>Integration into the information system</h2>
+  <p>The model is part of the LocWaste information system developed in Activity 2:</p>
+  <ul>
+    <li><b>Batch:</b> every training run predicts all {{ ev.quality.zones.upz }} UPZ; results feed the risk layer of the map and the home page.</li>
+    <li><b>On demand:</b> the risk check page and this demo; risk checks and signed-in users' demos are logged with user, model version, result and duration.</li>
+    <li><b>Decision:</b> high-risk UPZ become pending collection priorities that administrators schedule, complete or dismiss.</li>
+    <li><b>Lifecycle:</b> retraining from the admin pages or automatically after {{ config.AUTO_RETRAIN_THRESHOLD }} new citizen reports.</li>
+  </ul>
+</section>
+
+<section class="card prose">
+  <h2>Monitoring, incident reporting and user feedback</h2>
+  <ul>
+    <li><b>Monitoring:</b> requests, response times, errors and inferences are logged automatically and shown at <code>/admin/monitoring</code> (phase 6).</li>
+    <li><b>Incidents:</b> unhandled errors are recorded and replaced by a friendly page; users open an <i>incident</i> or <i>bug</i> ticket with the page attached.</li>
+    <li><b>Feedback:</b> <i>suggestion</i> tickets; an administrator sets them in review and resolves them with an answer the user reads in My tickets.</li>
+  </ul>
+</section>
+{% endblock %}

@@ -1,4 +1,5 @@
 import io
+import math
 import time
 from dataclasses import dataclass
 
@@ -53,11 +54,13 @@ def _model(run: ModelRun):
 def _predict(upz: Upz, run: ModelRun) -> tuple:
     model = _model(run)
     row = zone_row(training_service.reports_frame(), training_service.zones_frame(), upz.code)
-    probabilities = model.predict_proba(row[ml_config.FEATURES])[0]
+    # The columns the model was trained with, so a run trained before a feature change still works.
+    columns = list(getattr(model, "feature_names_in_", ml_config.FEATURES))
+    probabilities = model.predict_proba(row[columns])[0]
     by_level = {level: float(p) for level, p in zip(model.classes_, probabilities)}
     level = max(by_level, key=by_level.get)
     period = (row["month"].iloc[0] + pd.offsets.MonthBegin(1)).date()
-    features = {name: float(row[name].iloc[0]) for name in ml_config.FEATURES}
+    features = {name: float(row[name].iloc[0]) for name in columns}
     return period, level, by_level, features
 
 
@@ -108,3 +111,68 @@ def history(user: User, page: int):
     return query.order_by(InferenceLog.created_at.desc(), InferenceLog.id.desc()).paginate(
         page=page, per_page=PAGE_SIZE, error_out=False
     )
+
+
+# Model demonstration: any visitor enters the features of one zone-month and gets a prediction.
+
+BOUNDS = {"share_large": (0, 1), "share_vectors": (0, 1), "share_near_water": (0, 1), "month_of_year": (1, 12)}
+
+
+def demo_columns() -> list[str]:
+    """The inputs of the active model, in the order it was trained with."""
+    run = training_service.active_run()
+    if run is None:
+        raise InferenceUnavailable(NO_MODEL)
+    return list(getattr(_model(run), "feature_names_in_", ml_config.FEATURES))
+
+
+def example_features(upz: Upz) -> dict[str, float]:
+    """A real starting point: the zone's last complete month, built as for training."""
+    columns = demo_columns()
+    row = zone_row(training_service.reports_frame(), training_service.zones_frame(), upz.code)
+    return {name: round(float(row[name].iloc[0]), 3) for name in columns}
+
+
+def clean_values(form) -> tuple[dict[str, float], list[str]]:
+    """Numbers within their natural range: shares 0-1, month 1-12, change any sign, counts and rates >= 0."""
+    values, errors = {}, []
+    for name in demo_columns():
+        label = ml_config.FEATURE_LABELS.get(name, name)
+        try:
+            value = float(form.get(name, ""))
+        except ValueError:
+            errors.append(f"{label} must be a number.")
+            continue
+        if not math.isfinite(value):
+            errors.append(f"{label} must be a finite number.")
+            continue
+        low, high = BOUNDS.get(name, (None, None) if name == "change_1" else (0, None))
+        if low is not None and value < low or high is not None and value > high:
+            errors.append(f"{label} must be between {low} and {high}." if high is not None
+                          else f"{label} cannot be negative.")
+        values[name] = value
+    return values, errors
+
+
+def predict_values(user: User | None, values: dict[str, float]) -> dict:
+    """Predict from entered values with the active model.
+
+    Only signed-in users' demos are saved, as kind "demo", so anonymous visitors cannot fill the
+    logs; demos are not app events, so they never change the operational monitoring figures.
+    """
+    started = time.perf_counter()
+    run = training_service.active_run()
+    if run is None:
+        raise InferenceUnavailable(NO_MODEL)
+    model = _model(run)
+    columns = list(getattr(model, "feature_names_in_", ml_config.FEATURES))
+    probabilities = model.predict_proba(pd.DataFrame([values])[columns])[0]
+    by_level = {level: float(p) for level, p in zip(model.classes_, probabilities)}
+    level = max(by_level, key=by_level.get)
+    duration_ms = (time.perf_counter() - started) * 1000
+    if user is not None:
+        db.session.add(InferenceLog(user_id=user.id, model_run_id=run.id, kind="demo", level=level,
+                                    probability=by_level[level], duration_ms=duration_ms))
+        db.session.commit()
+    return {"level": level, "probabilities": by_level, "run": run, "duration_ms": duration_ms,
+            "logged": user is not None}

@@ -1,0 +1,77 @@
+/* CRISP-ML documentation at /crisp-ml. Uses the tokens from tokens.css and components from app.css. */
+.crisp { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 28px; align-items: start; padding-top: 20px; }
+.crisp-menu { position: sticky; top: 84px; display: flex; flex-direction: column; gap: 4px; }
+.crisp-menu a { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 11px; color: var(--fg-muted); font-weight: 600; font-size: 14px; }
+.crisp-menu a:hover { color: var(--brand); background: var(--surface); }
+.crisp-menu a.active { background: var(--brand-soft); color: var(--brand); }
+.crisp-menu .crisp-home { margin-bottom: 6px; color: var(--fg); }
+.crisp-menu .crisp-home i { color: var(--brand); }
+.crisp-menu .num { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--subtle); font-size: 12px; font-weight: 800; flex-shrink: 0; }
+.crisp-menu a.active .num { background: var(--brand); color: var(--on-brand); }
+.crisp-body { min-width: 0; }
+.crisp-body > section { margin-bottom: 18px; }
+.crisp-head { padding: 6px 0 18px; }
+.crisp-head h1 { font-size: 32px; letter-spacing: -.03em; margin: 8px 0 10px; }
+.crisp-head .lead { font-size: 16px; color: var(--fg-muted); margin: 0; max-width: 760px; }
+.crisp .prose h2 { margin: 0; font-size: 20px; letter-spacing: -.02em; }
+.crisp .prose h3 { margin: 6px 0 0; font-size: 16px; }
+.crisp .prose p, .crisp .prose li { color: var(--fg-muted); line-height: 1.65; }
+.crisp .prose ul, .crisp .prose ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.crisp code { font-size: .88em; background: var(--subtle); padding: 1px 5px; border-radius: 5px; }
+.crisp .two { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start; }
+.ctable { width: 100%; border-collapse: collapse; font-size: 14px; }
+.ctable th, .ctable td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.ctable thead th { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--fg-faint); }
+.ctable tbody th { width: 170px; color: var(--fg); }
+.ctable td { color: var(--fg-muted); }
+.ctable tr.chosen td { background: var(--brand-soft); color: var(--fg); font-weight: 600; }
+.ctable.small { font-size: 12.5px; }
+.scroll { overflow-x: auto; }
+.crisp figure { margin: 4px 0 0; }
+.crisp figure img { width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--line); background: #fff; }
+.crisp figure.narrow { max-width: 520px; }
+.crisp .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; margin-bottom: 18px; }
+.crisp .prose .kpis { margin: 4px 0 0; }
+.kpi { padding: 16px 18px; display: flex; flex-direction: column; gap: 4px; box-shadow: none; }
+.kpi b { font-size: 24px; letter-spacing: -.03em; }
+.kpi small { color: var(--fg-faint); }
+.crisp .note { font-size: 13.5px; color: var(--fg-faint); }
+.phase-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.phase-card { display: flex; align-items: center; gap: 12px; padding: 16px; color: var(--fg); }
+.phase-card:hover { border-color: var(--brand); }
+.phase-card small { display: block; font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--fg-faint); }
+.phase-card .tab-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--brand-soft); color: var(--brand); font-size: 18px; flex-shrink: 0; }
+.crisp-pager { display: flex; justify-content: space-between; gap: 12px; margin: 8px 0 30px; }
+details.experiments summary { cursor: pointer; font-weight: 700; color: var(--brand); }
+details.experiments[open] summary { margin-bottom: 10px; }
+.badge-sim { display: inline-block; padding: 2px 8px; border-radius: 6px; background: var(--medium-soft); color: var(--medium-ink, #8a5a16); font-size: 11px; font-weight: 800; letter-spacing: .06em; vertical-align: middle; }
+.prefill { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 14px; color: var(--fg-muted); }
+.prefill select, .demo-grid input { padding: 9px 11px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--fg); font: inherit; }
+.demo-form { display: flex; flex-direction: column; gap: 14px; }
+.demo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+.demo-grid label { display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; font-weight: 600; color: var(--fg-muted); }
+.demo-form .btn { align-self: flex-start; }
+.errors { color: var(--high-ink); font-size: 13px; font-weight: 600; }
+.demo-result { padding: 18px 20px; display: flex; flex-direction: column; gap: 10px; box-shadow: none; }
+.demo-result .level { font-size: 26px; letter-spacing: -.03em; }
+.demo-result .level.high { color: var(--high-ink); }
+.demo-result .level.medium { color: var(--medium-ink, #8a5a16); }
+.demo-result .level.low { color: var(--low-ink, var(--brand)); }
+.probs { display: flex; flex-direction: column; gap: 6px; max-width: 460px; }
+.probs div { display: grid; grid-template-columns: 70px 1fr 50px; align-items: center; gap: 10px; font-size: 13px; }
+.probs i { display: block; height: 10px; border-radius: 5px; min-width: 2px; }
+.probs i.low { background: var(--low, #5f9e7c); }
+.probs i.medium { background: var(--medium, #d39a4f); }
+.probs i.high { background: var(--high, #d9706a); }
+.demo-result small { color: var(--fg-faint); }
+
+@media (max-width: 900px) {
+  .crisp { grid-template-columns: 1fr; }
+  .crisp-menu { position: static; flex-direction: row; overflow-x: auto; padding-bottom: 6px; }
+  .crisp-menu a { white-space: nowrap; }
+  .crisp .two, .phase-cards { grid-template-columns: 1fr; }
+  .ctable { display: block; overflow-x: auto; }
+  .ctable tbody th { width: auto; }
+  .crisp-head h1 { font-size: 26px; }
+  .crisp-pager { flex-direction: column; }
+}
