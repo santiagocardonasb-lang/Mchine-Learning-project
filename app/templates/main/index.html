@@ -108,7 +108,8 @@
 
   <section id="phases">
     <h2>CRISP-ML phases</h2>
-    <p class="sub">The methodology applied to predicting waste accumulation risk by UPZ, step by step.</p>
+    <p class="sub">The methodology applied to predicting waste accumulation risk by UPZ, step by step.
+      <a class="link" href="{{ url_for('crisp.index') }}">Full documentation of every phase, with evidence and a model demo →</a></p>
     {# Without JavaScript the tab list stays hidden and every phase is shown in order. #}
     <div class="phase-tabs" role="tablist" aria-label="CRISP-ML phases" hidden>
       {% for phase in content.PHASES %}

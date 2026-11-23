@@ -1,0 +1,102 @@
+{% extends "crisp/layout.html" %}
+{% block phase %}
+{% set fm = ev.final_run.metrics %}{% set t = fm.test %}{% set cm = t.confusion_matrix %}
+<header class="crisp-head">
+  <span class="label">Phase {{ number }}</span>
+  <h1>{{ phase.name }}</h1>
+  <p class="lead">Metrics chosen for the business question, temporal cross-validation, overfitting and bias analysis,
+    expert review and the final result on months the model never saw.</p>
+</header>
+
+<section class="card prose">
+  <h2>Metrics and why</h2>
+  <ul>
+    <li><b>Macro-F1 (main metric):</b> the average F1 of the three classes, so the high class counts as much as the others; it is the selection criterion.</li>
+    <li><b>Recall of the high class:</b> share of the zones that really were high that the model flagged; it breaks ties.</li>
+    <li><b>Accuracy:</b> reported for reference only, because a model can score well on it while missing the high zones.</li>
+    <li><b>Confusion matrix:</b> shows which errors happen, especially high zones predicted as low.</li>
+  </ul>
+</section>
+
+<section class="card prose">
+  <h2>Temporal cross-validation and comparison</h2>
+  <p>Five-fold TimeSeriesSplit over whole months: each fold trains on the past and validates on the following months,
+    as the model is used in practice (Bergmeir &amp; Benítez, 2012). Random K-fold would mix future and past months.</p>
+  <table class="ctable">
+    <thead><tr><th>Model</th><th>CV macro-F1</th><th>CV recall high</th><th>CV accuracy</th></tr></thead>
+    <tbody>
+      {% for name in ["baseline", "logistic_regression", "random_forest"] %}{% set c = fm.cv[name] %}
+        <tr{% if name == fm.chosen_model %} class="chosen"{% endif %}>
+          <td>{{ fm.model_names[name] }}</td>
+          <td>{{ "%.3f"|format(c.macro_f1.mean) }} ± {{ "%.3f"|format(c.macro_f1.std) }}</td>
+          <td>{{ "%.3f"|format(c.recall_high.mean) }} ± {{ "%.3f"|format(c.recall_high.std) }}</td>
+          <td>{{ "%.3f"|format(c.accuracy.mean) }} ± {{ "%.3f"|format(c.accuracy.std) }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <figure><img src="{{ url_for('static', filename='crisp/model_comparison.png') }}" alt="Macro-F1 of each model in cross-validation and on the test months"></figure>
+</section>
+
+<section class="card prose">
+  <h2>Overfitting, underfitting, bias and risks</h2>
+  <figure><img src="{{ url_for('static', filename='crisp/overfitting.png') }}" alt="Training and validation macro-F1 of each random forest configuration"></figure>
+  <ul>
+    <li><b>Overfitting:</b> deep trees reach a macro-F1 near 1.0 on the training folds but do not validate better. The
+      selected forest (depth {{ config.MAX_DEPTH }}) keeps the gap small: {{ "%.2f"|format(ev.best.random_forest.train_macro_f1) }}
+      on training folds vs {{ "%.2f"|format(ev.best.random_forest.val_macro_f1) }} on validation.</li>
+    <li><b>Underfitting:</b> the baseline ({{ "%.2f"|format(fm.cv.baseline.macro_f1.mean) }}) and the linear model
+      ({{ "%.2f"|format(fm.cv.logistic_regression.macro_f1.mean) }}) stay below the forest, so non-linear effects matter.</li>
+    <li><b>Ceiling of the problem:</b> each month adds random variation that no feature can foresee. A model that knew
+      the exact parameters of the data generator would reach about 0.63 macro-F1 on this target; the selected model
+      reaches {{ "%.2f"|format(fm.cv.random_forest.macro_f1.mean) }}, about {{ "%.0f"|format(fm.cv.random_forest.macro_f1.mean / 0.632 * 100) }} % of that ceiling.</li>
+    <li><b>Medium class:</b> the hardest, because it sits between the other two; most errors are between neighboring levels.</li>
+    <li><b>Bias:</b> zones where citizens report less would look safer than they are; rates per inhabitant and the
+      territorial features reduce, but do not remove, this effect. UPZ population is estimated by area.</li>
+    <li><b>Synthetic data:</b> the metrics show that the method works on data calibrated on the real city, not yet its
+      accuracy on real reports; live monitoring measures that as real months close.</li>
+  </ul>
+</section>
+
+<section class="card prose">
+  <h2>Review with a domain-knowledgeable person</h2>
+  <p>The results and the system were reviewed with the course professor of Machine Learning in the project reviews;
+    the feedback on the presentation of the system is documented in
+    <code>docs/superpowers/specs/2026-11-07-professor-feedback-design.md</code>. The professor asked for visible model
+    parameters, cross-validation mean ± standard deviation, a comparison against a baseline and a real error analysis,
+    and for the project context to come before the tools.</p>
+  <table class="ctable">
+    <thead><tr><th>Feedback</th><th>What changed</th></tr></thead>
+    <tbody>
+      <tr><td>Show the context and the methodology before the tools</td><td>Public presentation at <code>/</code>; the app moved behind sign-in</td></tr>
+      <tr><td>Make the evaluation verifiable</td><td>Stored parameters, CV mean ± std, baseline comparison and confusion matrix on the model page and here</td></tr>
+      <tr><td>Analyse the errors, not only the score</td><td>Error analysis by class; the costliest error (high predicted as low) is tracked</td></tr>
+      <tr><td>The map must include the current month</td><td>"This month" period added; zones without reports in a period show no data</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="card prose">
+  <h2>Selected model and final test</h2>
+  <p>The <b>{{ fm.model_names[fm.chosen_model]|lower }}</b> has the best CV macro-F1 and is selected. Its final
+    performance is measured once on the {{ fm.months.test }} test months ({{ t.test_months[0] }} to {{ t.test_months[-1] }}),
+    which were not used for selection or tuning.</p>
+  <div class="kpis">
+    <div class="card kpi"><span class="label">Test macro-F1</span><b>{{ "%.3f"|format(t.macro_f1) }}</b><small>baseline {{ "%.3f"|format(fm.baseline_test.macro_f1) }}</small></div>
+    <div class="card kpi"><span class="label">Recall high</span><b>{{ "%.2f"|format(t.recall_high) }}</b><small>criterion ≥ 0.60</small></div>
+    <div class="card kpi"><span class="label">High predicted as low</span><b>{{ cm[2][0] }} of {{ cm[2]|sum }}</b><small>{{ "%.0f"|format(cm[2][0] / (cm[2]|sum) * 100) }} % · criterion ≤ 10 %</small></div>
+    <div class="card kpi"><span class="label">Accuracy</span><b>{{ "%.2f"|format(t.accuracy) }}</b><small>baseline {{ "%.2f"|format(fm.baseline_test.accuracy) }}</small></div>
+  </div>
+  <div class="two">
+    <figure><img src="{{ url_for('static', filename='crisp/confusion_matrix.png') }}" alt="Confusion matrix of the selected model on the test months"></figure>
+    <div>
+      <table class="ctable">
+        <thead><tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th><th>Support</th></tr></thead>
+        <tbody>{% for lvl, m in t.per_class.items() %}<tr><td>{{ lvl }}</td><td>{{ "%.2f"|format(m.precision) }}</td><td>{{ "%.2f"|format(m.recall) }}</td><td>{{ "%.2f"|format(m.f1) }}</td><td>{{ m.support }}</td></tr>{% endfor %}</tbody>
+      </table>
+      <p class="note">All success criteria of phase 1 are met: macro-F1 is {{ "%.1f"|format(t.macro_f1 / fm.baseline_test.macro_f1) }}× the baseline.</p>
+    </div>
+  </div>
+  <figure><img src="{{ url_for('static', filename='crisp/feature_importance.png') }}" alt="Top 10 feature importances of the selected model"></figure>
+</section>
+{% endblock %}

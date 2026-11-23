@@ -1,0 +1,95 @@
+{% extends "crisp/layout.html" %}
+{% block phase %}
+{% set q = ev.quality %}{% set pt = ev.partitions %}
+<header class="crisp-head">
+  <span class="label">Phase {{ number }}</span>
+  <h1>{{ phase.name }}</h1>
+  <p class="lead">From raw reports and open data to one clean, leakage-free row per UPZ and month.</p>
+</header>
+
+<section class="card prose">
+  <h2>Selected sources and features</h2>
+  <p>Every source comes from Datos Abiertos Bogotá or from the app itself. Features were chosen because a collection
+    planner would look at them: how many reports a zone had recently and how that compares with its usual level, what
+    kind of accumulation it is, and the zone's fixed traits.</p>
+  <table class="ctable">
+    <thead><tr><th>Group</th><th>Features</th><th>Justification</th></tr></thead>
+    <tbody>
+      <tr><td>Recent history</td><td>reports, rate per 10,000, lags 1–3, 3-month average, change vs last month</td><td>Accumulation persists from one month to the next</td></tr>
+      <tr><td>Usual level</td><td>historical rate per 10,000 (mean of every month up to t)</td><td>Separates zones that are always busy from a one-month spike</td></tr>
+      <tr><td>Report details</td><td>share of large piles, share with vectors, share near water, open at month end</td><td>Severity and how well the zone is being attended</td></tr>
+      <tr><td>Territory</td><td>UAESP critical points, public space per inhabitant, population density</td><td>Structural drivers of dumping</td></tr>
+      <tr><td>Season</td><td>month of the year</td><td>Rainy months raise accumulation</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="card prose">
+  <h2>Missing values, duplicates, inconsistencies and outliers</h2>
+  <table class="ctable">
+    <thead><tr><th>Check (raw data)</th><th>Found</th><th>Treatment</th></tr></thead>
+    <tbody>
+      <tr><td>Missing values in model fields</td><td>{{ q.reports.missing.values()|sum - q.reports.missing.neighborhood }}</td><td>None needed</td></tr>
+      <tr><td>Missing neighborhood name</td><td>{{ q.reports.missing.neighborhood }} reports</td><td>Kept: points outside a cadastral sector; not a model input</td></tr>
+      <tr><td>Exact duplicates</td><td>{{ q.reports.exact_duplicates }}</td><td>Rule in place: duplicates would be dropped</td></tr>
+      <tr><td>Same UPZ, coordinates and time</td><td>{{ q.reports.same_place_and_time }}</td><td>Rule in place: kept once</td></tr>
+      <tr><td>Invalid waste type, size or status</td><td>{{ q.reports.invalid_categories.values()|sum }}</td><td>Rejected by the form and the database model</td></tr>
+      <tr><td>Updated before reported</td><td>{{ q.reports.updated_before_reported }}</td><td>Would be flagged; none found</td></tr>
+      <tr><td>Report in an unknown UPZ</td><td>{{ q.reports.unknown_upz }}</td><td>Points outside urban Bogotá are rejected by the app</td></tr>
+      <tr><td>Rejected reports (moderation)</td><td>{{ q.reports.status_counts.get('rejected', 0) }}</td><td>Excluded from features and training</td></tr>
+      <tr><td>Current partial month</td><td>always present</td><td>Excluded: only complete UTC months are used</td></tr>
+      <tr><td>UPZ without public space value</td><td>{{ q.zones.public_space_imputed_with_median }}</td><td>Would be filled with the median (rule in ml/features.py)</td></tr>
+      <tr><td>Rates above the IQR fence ({{ q.panel.rate_iqr_upper_fence }})</td><td>{{ q.panel.rate_outliers }} zone-months ({{ "%.1f"|format(q.panel.rate_outlier_share * 100) }} %)</td><td>Kept: high rates are the hotspots the model must learn, not errors</td></tr>
+    </tbody>
+  </table>
+  <figure><img src="{{ url_for('static', filename='crisp/rate_outliers.png') }}" alt="Box plot of the monthly report rate per UPZ with the outliers above the IQR fence"></figure>
+</section>
+
+<section class="card prose">
+  <h2>Transformations</h2>
+  <ol>
+    <li><b>Zone detection:</b> each report's coordinates are placed in its locality, UPZ and neighborhood (point in polygon).</li>
+    <li><b>Aggregation:</b> reports are grouped by UPZ and calendar month; months without reports get zeros.</li>
+    <li><b>Rates:</b> counts are divided by the UPZ population (locality population split by area) × 10,000, so zones of different size are comparable.</li>
+    <li><b>Lags and windows:</b> lags 1–3, a 3-month average, the change vs last month and the historical rate, all computed with data up to month t.</li>
+    <li><b>Shares:</b> boolean report attributes become shares of the month's reports (0–1), so no categorical encoding is needed.</li>
+    <li><b>Scaling:</b> standardization only for logistic regression, inside a pipeline fitted on the training folds; trees need no scaling.</li>
+    <li><b>Target:</b> next month's rate is split into terciles (low, medium, high) with cut points computed on the training months only: {{ pt.cuts_from_training_months|join(" and ") }}.</li>
+  </ol>
+</section>
+
+<section class="card prose">
+  <h2>Before and after</h2>
+  <h3>Raw reports (UPZ 80, Corabastos)</h3>
+  <div class="scroll"><table class="ctable small">
+    <thead><tr>{% for k in ev.before_after.raw_sample[0] %}<th>{{ k }}</th>{% endfor %}</tr></thead>
+    <tbody>{% for r in ev.before_after.raw_sample %}<tr>{% for v in r.values() %}<td>{{ v }}</td>{% endfor %}</tr>{% endfor %}</tbody>
+  </table></div>
+  <h3>Processed zone-months (same UPZ)</h3>
+  <div class="scroll"><table class="ctable small">
+    <thead><tr>{% for k in ev.before_after.panel_sample[0] %}<th>{{ k }}</th>{% endfor %}</tr></thead>
+    <tbody>{% for r in ev.before_after.panel_sample %}<tr>{% for v in r.values() %}<td>{{ v }}</td>{% endfor %}</tr>{% endfor %}</tbody>
+  </table></div>
+  <p class="note">{{ "{:,}".format(q.reports.rows) }} report rows become {{ "{:,}".format(q.panel.rows) }} zone-months
+    ({{ "{:,}".format(q.panel.labelled_rows) }} with a known next month) and {{ q.panel.features|length }} features,
+    with {{ q.panel.missing_after }} missing values after processing.</p>
+</section>
+
+<section class="card prose">
+  <h2>Training, validation and test partitions</h2>
+  <p>The data is ordered in time, so partitions are made by whole months, never at random.</p>
+  <ul>
+    <li><b>Training:</b> {{ pt.train|length }} months, {{ pt.train[0] }} to {{ pt.train[-1] }} ({{ "{:,}".format(pt.train_rows) }} rows).</li>
+    <li><b>Validation:</b> five-fold TimeSeriesSplit inside the training months; every fold trains on earlier months than it validates on.</li>
+    <li><b>Test:</b> the last {{ pt.test|length }} months, {{ pt.test[0] }} to {{ pt.test[-1] }} ({{ "{:,}".format(pt.test_rows) }} rows), used once to report final performance.</li>
+  </ul>
+  <table class="ctable">
+    <thead><tr><th>Fold</th><th>Trains on</th><th>Validates on</th></tr></thead>
+    <tbody>{% for f in pt.folds %}<tr><td>{{ loop.index }}</td><td>{{ f.train }}</td><td>{{ f.validate }}</td></tr>{% endfor %}</tbody>
+  </table>
+  <p>Cut points, scaling and model fitting happen inside each fold with that fold's training months only, which
+    prevents leakage from validation or test months.</p>
+  <figure><img src="{{ url_for('static', filename='crisp/monthly_reports.png') }}" alt="Reports per month, coloured by training and test months"></figure>
+  <figure class="narrow"><img src="{{ url_for('static', filename='crisp/class_balance.png') }}" alt="Number of zone-months per target class in the training months"></figure>
+</section>
+{% endblock %}

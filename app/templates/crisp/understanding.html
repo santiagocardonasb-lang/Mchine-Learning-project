@@ -1,0 +1,139 @@
+{% extends "crisp/layout.html" %}
+{% block phase %}
+{% set q = ev.quality %}
+<header class="crisp-head">
+  <span class="label">Phase {{ number }}</span>
+  <h1>{{ phase.name }}</h1>
+  <p class="lead">What problem the model solves, for whom, with which data, and how success is measured before any model is trained.</p>
+</header>
+
+<section class="card prose">
+  <h2>The approved problem</h2>
+  <p>Solid waste piles up in Bogotá's public space before anyone records it. National figures describe what reaches
+    landfills (12.1 million tonnes in Colombia in 2024, SSPD, 2025), not where waste accumulates on the street, so
+    collection reacts to critical points once they exist. LocWaste collects citizen reports and anticipates, for each
+    of the 112 urban UPZ (urban planning zones), whether next month's rate of accumulation reports will be low, medium
+    or high.</p>
+  <div class="two">
+    <div>
+      <h3>Stakeholders</h3>
+      <ul>
+        <li><b>UAESP</b>, the city unit that plans waste collection and registers critical points.</li>
+        <li><b>Collection operators</b>, who schedule crews and routes.</li>
+        <li><b>Local mayor's offices</b>, responsible for public space in each locality.</li>
+        <li><b>Citizens</b>, who report accumulation points and live with their effects.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Intended beneficiaries</h3>
+      <ul>
+        <li>Residents of zones with recurrent accumulation (less waste, fewer rodents and odors).</li>
+        <li>Collection planners, who get a ranked list of zones instead of reacting to complaints.</li>
+        <li>Awareness campaigns, which can target the zones at risk before the peak.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="card prose">
+  <h2>From business objectives to Machine Learning objectives</h2>
+  <table class="ctable">
+    <thead><tr><th>Business objective</th><th>Machine Learning objective</th></tr></thead>
+    <tbody>
+      <tr><td>Send collection to the zones that will need it first</td><td>Classify each UPZ's next-month report rate as low, medium or high</td></tr>
+      <tr><td>Do not miss the worst zones</td><td>Maximize recall of the high class; keep high zones predicted as low near zero</td></tr>
+      <tr><td>Do not flag the whole city</td><td>Balanced performance across classes: macro-F1 as the main metric</td></tr>
+      <tr><td>Keep working as the city changes</td><td>Retrain from the app and monitor drift and live performance</td></tr>
+    </tbody>
+  </table>
+  <h3>Questions the model answers</h3>
+  <ol>
+    <li>Which UPZ will have a high rate of accumulation reports next month?</li>
+    <li>How confident is that prediction (class probabilities)?</li>
+    <li>Which factors drive the risk of a zone (feature importance)?</li>
+  </ol>
+  <p><b>Learning task:</b> supervised multiclass classification on a panel of zone-months (tabular data ordered in
+    time). The unit of analysis is one UPZ in one calendar month; the target is the level of the following month.</p>
+</section>
+
+<section class="card prose">
+  <h2>Data sources, variables and size</h2>
+  <table class="ctable">
+    <thead><tr><th>Source</th><th>Publisher</th><th>Use</th></tr></thead>
+    <tbody>
+      <tr><td>Critical points of clandestine dumping ({{ q.zones.critical_points_total }} active)</td><td>UAESP</td><td>Feature and calibration of the synthetic history</td></tr>
+      <tr><td>Population projections by locality 2005–2035</td><td>SDP</td><td>Rates per 10,000 inhabitants, density</td></tr>
+      <tr><td>Localities, UPZ, public space indicator</td><td>SDP, DADEP</td><td>Zones and the public space feature</td></tr>
+      <tr><td>Cadastral sectors</td><td>UAECD</td><td>Neighborhood of each report</td></tr>
+      <tr><td>Citizen reports (synthetic history + real reports)</td><td>LocWaste</td><td>Date, place, waste type, size, rodents, insects, odor, water</td></tr>
+    </tbody>
+  </table>
+  <div class="kpis">
+    <div class="card kpi"><span class="label">Reports</span><b>{{ "{:,}".format(q.reports.rows) }}</b><small>{{ q.reports.first }} to {{ q.reports.last }}</small></div>
+    <div class="card kpi"><span class="label">Zones</span><b>{{ q.zones.upz }}</b><small>UPZ in {{ q.zones.localities }} localities</small></div>
+    <div class="card kpi"><span class="label">Zone-months</span><b>{{ "{:,}".format(q.panel.labelled_rows) }}</b><small>labelled rows, {{ q.panel.features|length }} features</small></div>
+    <div class="card kpi"><span class="label">Target</span><b>3 levels</b><small>terciles of next month's reports per 10,000</small></div>
+  </div>
+</section>
+
+<section class="card prose">
+  <h2>Data quality, relevance and sufficiency</h2>
+  <ul>
+    <li><b>Quality:</b> no missing values in the fields the model uses, {{ q.reports.exact_duplicates }} exact duplicates,
+      {{ q.reports.invalid_categories.values()|sum }} invalid categories and {{ q.reports.updated_before_reported }} reports
+      updated before being reported. Only the neighborhood name is missing in {{ q.reports.missing.neighborhood }} reports
+      (points outside a cadastral sector); it is not a model input. Details in phase 2.</li>
+    <li><b>Relevance:</b> the features describe recent history, report details and the territory, which is what
+      collection planners use; critical points and density are known drivers of dumping.</li>
+    <li><b>Sufficiency:</b> no public dataset reports accumulation by zone and month, so the first 24 months are
+      synthetic, calibrated on the real open data and labelled <code>source = synthetic</code>. Real reports are added
+      as citizens use the app. This is the main limitation of the project.</li>
+  </ul>
+</section>
+
+<section class="card prose">
+  <h2>Feasibility, limitations and risks</h2>
+  <div class="two">
+    <div>
+      <h3>Technical</h3>
+      <ul>
+        <li>Small tabular data: a random forest trains in seconds on a free Render instance.</li>
+        <li>Open data is public and refreshed by the city.</li>
+        <li>The trained model is stored in PostgreSQL, so it survives redeploys.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Organizational</h3>
+      <ul>
+        <li>Value depends on citizens reporting and on administrators moderating reports.</li>
+        <li>Predictions support, not replace, the decisions of the collection operator.</li>
+      </ul>
+    </div>
+  </div>
+  <table class="ctable">
+    <thead><tr><th>Risk</th><th>Mitigation</th></tr></thead>
+    <tbody>
+      <tr><td>Synthetic history differs from reality</td><td>Labelled source, documented assumptions, retraining with real reports, drift checks</td></tr>
+      <tr><td>Uneven participation across zones</td><td>Rates per inhabitant; critical points and density as features</td></tr>
+      <tr><td>Leakage from the future</td><td>Features up to month t only, cut points fitted on training months, temporal validation</td></tr>
+      <tr><td>False or spam reports</td><td>Admin moderation; rejected reports never reach the model</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="card prose">
+  <h2>Measurable success criteria</h2>
+  <table class="ctable">
+    <thead><tr><th>Criterion</th><th>Threshold</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>Macro-F1 (temporal CV and test)</td><td>≥ 2 × the most-frequent baseline</td><td>Proves the model learns beyond the class distribution</td></tr>
+      <tr><td>Recall of the high class (test)</td><td>≥ 0.60</td><td>Most zones that will be critical are flagged</td></tr>
+      <tr><td>High zones predicted as low (test)</td><td>≤ 10 %</td><td>The costliest error is kept small</td></tr>
+      <tr><td>Response time of a risk check</td><td>&lt; 10 s on the free hosting tier</td><td>Usable in operations</td></tr>
+    </tbody>
+  </table>
+  <p class="note">The best possible macro-F1 for this target is about 0.63, even for a model that knew the exact
+    parameters of the data generator, because each month adds random variation that no feature can predict
+    (see phase 4). An absolute threshold such as 0.8 is therefore not attainable for this target with this data.</p>
+</section>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}{{ number }}. {{ phase.name }} · CRISP-ML · LocWaste{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/crisp.css') }}">
+{% endblock %}
+
+{% block header %}
+{% set nav_action %}
+  <a class="btn btn-ghost" href="{{ url_for('main.home') }}">Project</a>
+  {% if current_user.is_authenticated %}
+    <a class="btn btn-brand" href="{{ url_for('main.app_home') }}">Go to the app<i class="bi bi-arrow-right"></i></a>
+  {% else %}
+    <a class="btn btn-brand" href="{{ url_for('auth.login') }}">Sign in</a>
+  {% endif %}
+{% endset %}
+{% include "partials/bare_nav.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="page crisp">
+  <nav class="crisp-menu" aria-label="CRISP-ML phases">
+    <a class="crisp-home" href="{{ url_for('crisp.index') }}"><i class="bi bi-diagram-3"></i>CRISP-ML(Q) overview</a>
+    {% for p in phases %}
+      <a href="{{ url_for('crisp.deployment') if p.slug == 'deployment' else url_for('crisp.phase', slug=p.slug) }}"
+         {% if phase and p.slug == phase.slug %}aria-current="page" class="active"{% endif %}>
+        <span class="num">{{ loop.index }}</span>{{ p.name }}
+      </a>
+    {% endfor %}
+  </nav>
+  <article class="crisp-body">
+    {% block phase %}{% endblock %}
+    {% if phase %}
+      <nav class="crisp-pager" aria-label="Phases">
+        {% if previous %}<a class="btn btn-soft" href="{{ url_for('crisp.deployment') if previous.slug == 'deployment' else url_for('crisp.phase', slug=previous.slug) }}"><i class="bi bi-arrow-left"></i>{{ previous.name }}</a>{% else %}<span></span>{% endif %}
+        {% if following %}<a class="btn btn-soft" href="{{ url_for('crisp.deployment') if following.slug == 'deployment' else url_for('crisp.phase', slug=following.slug) }}">{{ following.name }}<i class="bi bi-arrow-right"></i></a>{% endif %}
+      </nav>
+    {% endif %}
+  </article>
+</div>
+{% endblock %}
