@@ -1,0 +1,2 @@
+{"event": "monitoring_check", "label": "SIMULATED", "scenario": "Stable month", "psi": 0.113, "psi_flag": false, "max_share_shift": 0.0, "share_flag": false, "live_macro_f1": 0.58, "performance_floor": 0.486, "performance_flag": false, "action": "none"}
+{"event": "monitoring_check", "label": "SIMULATED", "scenario": "Report surge", "psi": 0.323, "psi_flag": true, "max_share_shift": 0.151, "share_flag": true, "live_macro_f1": 0.44, "performance_floor": 0.486, "performance_flag": true, "action": "retrain"}
