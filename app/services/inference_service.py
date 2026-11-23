@@ -1,4 +1,5 @@
 import io
+import math
 import time
 from dataclasses import dataclass
 
@@ -142,6 +143,9 @@ def clean_values(form) -> tuple[dict[str, float], list[str]]:
         except ValueError:
             errors.append(f"{label} must be a number.")
             continue
+        if not math.isfinite(value):
+            errors.append(f"{label} must be a finite number.")
+            continue
         low, high = BOUNDS.get(name, (None, None) if name == "change_1" else (0, None))
         if low is not None and value < low or high is not None and value > high:
             errors.append(f"{label} must be between {low} and {high}." if high is not None
@@ -151,7 +155,11 @@ def clean_values(form) -> tuple[dict[str, float], list[str]]:
 
 
 def predict_values(user: User | None, values: dict[str, float]) -> dict:
-    """Predict from entered values with the active model and log it as a demo inference."""
+    """Predict from entered values with the active model.
+
+    Only signed-in users' demos are saved, as kind "demo", so anonymous visitors cannot fill the
+    logs; demos are not app events, so they never change the operational monitoring figures.
+    """
     started = time.perf_counter()
     run = training_service.active_run()
     if run is None:
@@ -162,9 +170,9 @@ def predict_values(user: User | None, values: dict[str, float]) -> dict:
     by_level = {level: float(p) for level, p in zip(model.classes_, probabilities)}
     level = max(by_level, key=by_level.get)
     duration_ms = (time.perf_counter() - started) * 1000
-    db.session.add(InferenceLog(user_id=user.id if user else None, model_run_id=run.id, kind="demo",
-                                level=level, probability=by_level[level], duration_ms=duration_ms))
-    db.session.add(AppEvent(kind="inference", user_id=user.id if user else None, duration_ms=duration_ms,
-                            message=f"Demo: {level}"))
-    db.session.commit()
-    return {"level": level, "probabilities": by_level, "run": run, "duration_ms": duration_ms}
+    if user is not None:
+        db.session.add(InferenceLog(user_id=user.id, model_run_id=run.id, kind="demo", level=level,
+                                    probability=by_level[level], duration_ms=duration_ms))
+        db.session.commit()
+    return {"level": level, "probabilities": by_level, "run": run, "duration_ms": duration_ms,
+            "logged": user is not None}

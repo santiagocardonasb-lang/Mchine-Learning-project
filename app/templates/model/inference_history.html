@@ -23,7 +23,7 @@
         {% for log in logs.items %}
           <tr>
             <td>{{ log.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
-            {% if current_user.is_admin %}<td>{{ log.user.name if log.user else ("Visitor" if log.kind == "demo" else "Automatic") }}</td>{% endif %}
+            {% if current_user.is_admin %}<td>{{ log.user.name if log.user else "Automatic" }}</td>{% endif %}
             <td>{{ log.upz.name if log.upz else ("Entered values" if log.kind == "demo" else "All zones") }}<small>{{ {"zone": "risk check", "demo": "model demo"}.get(log.kind, "training batch") }}</small></td>
             <td>{{ "Run " ~ log.model_run_id if log.model_run_id else "—" }}</td>
             <td>{% if log.level %}<span class="pill {{ log.level }}">{{ log.level | capitalize }} · {{ (log.probability * 100) | round | int }}%</span>{% else %}—{% endif %}</td>

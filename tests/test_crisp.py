@@ -8,8 +8,8 @@ import pytest
 from sklearn.ensemble import RandomForestClassifier
 
 from app.extensions import db
-from app.models import InferenceLog, ModelRun, Report, Upz
-from app.services import evidence_service
+from app.models import AppEvent, InferenceLog, ModelRun, Report, Upz
+from app.services import auth_service, evidence_service
 from ml import config
 
 SLUGS = [p["slug"] for p in evidence_service.PHASES]
@@ -94,9 +94,23 @@ def test_demo_prefills_a_real_zone_and_predicts_entered_values(client, zones):
 
     html = client.post("/crisp-ml/deployment?upz=80", data=demo_form()).get_data(as_text=True)
 
-    assert "risk</b>" in html and "model demo" in html
+    assert "risk</b>" in html and "sign in to keep" in html
+    assert InferenceLog.query.count() == 0  # anonymous demos are not saved
+    assert AppEvent.query.filter_by(kind="inference").count() == 0
+
+
+def test_signed_in_demo_is_logged_but_not_counted_as_operations(client, zones):
+    add_reports()
+    run = active_run()
+    ana = auth_service.register("Ana", "ana@mail.com", "secret123")
+    client.post("/auth/login", data={"email": "ana@mail.com", "password": "secret123"})
+
+    html = client.post("/crisp-ml/deployment?upz=80", data=demo_form()).get_data(as_text=True)
+
+    assert "saved in your inference history" in html
     log = InferenceLog.query.one()
-    assert (log.kind, log.model_run_id, log.user_id, log.status) == ("demo", run.id, None, "ok")
+    assert (log.kind, log.model_run_id, log.user_id, log.status) == ("demo", run.id, ana.id, "ok")
+    assert AppEvent.query.filter_by(kind="inference").count() == 0
 
 
 def test_demo_rejects_out_of_range_values(client, zones):
@@ -106,4 +120,13 @@ def test_demo_rejects_out_of_range_values(client, zones):
 
     assert "Share of large piles must be between 0 and 1." in html
     assert "Reports this month cannot be negative." in html
-    assert InferenceLog.query.count() == 0
+
+
+@pytest.mark.parametrize("bad", ["nan", "inf", "-Infinity"])
+def test_demo_rejects_values_that_are_not_finite(client, zones, bad):
+    active_run()
+
+    html = client.post("/crisp-ml/deployment", data=demo_form(rate=bad)).get_data(as_text=True)
+
+    assert "Reports per 10,000 inhabitants must be a finite number." in html
+    assert "risk</b>" not in html

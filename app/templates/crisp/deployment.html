@@ -41,7 +41,7 @@
             <div><span>{{ lvl }}</span><i style="width: {{ (p * 100)|round(1) }}%" class="{{ lvl }}"></i><b>{{ "%.0f"|format(p * 100) }} %</b></div>
           {% endfor %}
         </div>
-        <small>Answered in {{ "%.0f"|format(result.duration_ms) }} ms and logged in the inference history as a model demo.
+        <small>Answered in {{ "%.0f"|format(result.duration_ms) }} ms{{ " and saved in your inference history as a model demo" if result.logged else "; sign in to keep demo predictions in your inference history" }}.
           It is a forecast from report patterns, not a measurement of waste on the ground.</small>
       </div>
     {% endif %}
@@ -90,7 +90,7 @@
   <p>The model is part of the LocWaste information system developed in Activity 2:</p>
   <ul>
     <li><b>Batch:</b> every training run predicts all {{ ev.quality.zones.upz }} UPZ; results feed the risk layer of the map and the home page.</li>
-    <li><b>On demand:</b> the risk check page and this demo; each prediction is logged with user, model version, result and duration.</li>
+    <li><b>On demand:</b> the risk check page and this demo; risk checks and signed-in users' demos are logged with user, model version, result and duration.</li>
     <li><b>Decision:</b> high-risk UPZ become pending collection priorities that administrators schedule, complete or dismiss.</li>
     <li><b>Lifecycle:</b> retraining from the admin pages or automatically after {{ config.AUTO_RETRAIN_THRESHOLD }} new citizen reports.</li>
   </ul>

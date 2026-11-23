@@ -56,7 +56,8 @@ See `docs/superpowers/specs/2026-11-15-operations-design.md` for the decisions b
 
 - **CRISP-ML documentation and model demo** (`/crisp-ml`, public): one page per phase with the
   decisions, figures and evidence; `/crisp-ml/deployment` accepts the 16 features of a zone-month
-  (prefilled from a real UPZ) and returns the active model's prediction, logged as a model demo.
+  (prefilled from a real UPZ) and returns the active model's prediction; signed-in users' demos are
+  saved in their inference history, anonymous ones are not saved.
 - **Risk check** (`/risk-check`, any signed-in user): pick a UPZ, or press "Check risk now" on the
   map's zone card or "Check this zone's risk" in My reports. The active model predicts next
   month's level and class probabilities from that zone's stored reports, with the same features
